@@ -34,7 +34,7 @@ GOOGEL_API_KEY=<Your Google Gemini API Key>
 ### Clone this repository:
 ```plaintext
 git clone https://github.com/Anju982/YoutubeAssistant_RAG.git
-cd youtube-video-assistant
+cd YoutubeAssistant_RAG
 ```
 
 ### Install dependencies:
