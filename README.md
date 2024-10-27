@@ -88,8 +88,8 @@ streamlit run Ui.py
 
 ## Repository Structure
 
-- app.py: The main application code for Streamlit interface and user interaction.
-- helper.py: Contains helper functions for loading transcripts, summarizing content, and generating responses.
+- UI.py: The main application code for Streamlit interface and user interaction.
+- UIHelper.py: Contains helper functions for loading transcripts, summarizing content, and generating responses.
 - .env: Environment file for storing API keys securely.
 
 ## License
