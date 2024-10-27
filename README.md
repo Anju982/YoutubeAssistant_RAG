@@ -74,7 +74,7 @@ pip install -r requirements.txt
 ### Run the app:
 
 ```plaintext
-streamlit run app.py
+streamlit run Ui.py
 ```
 
 ### Access the application at http://localhost:8501 in your browser.
