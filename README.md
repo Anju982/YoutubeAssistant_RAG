@@ -10,6 +10,25 @@ Welcome to the **YouTube Video Assistant**! This application allows you to analy
 - **Optional External Sourcing**: Toggle to use external sources for more comprehensive answers.
 - **Vector Similarity Search**: Uses FAISS to fetch relevant video segments for better contextual responses.
 
+## Introduction: Installing Python on Windows
+
+Before using the YouTube Video Assistant, you need to have Python installed on your system. Follow these steps to install Python 3.12 or later:
+
+### Steps to Install Python
+
+1. **Download Python:**
+   - Visit the [official Python website](https://www.python.org/downloads/).
+   - Click on the "Download Python 3.12.x" button (the latest version).
+
+2. **Run the Installer:**
+   - Open the downloaded installer.
+   - Ensure you check the box that says "Add Python to PATH."
+   - Click on "Install Now" and follow the prompts.
+
+3. **Verify Installation:**
+   - Open Command Prompt (cmd).
+   - Type `python --version` and press Enter. You should see the Python version if installed correctly.
+
 ## Setup Instructions
 
 ### Prerequisites
@@ -35,6 +54,16 @@ GOOGEL_API_KEY=<Your Google Gemini API Key>
 ```plaintext
 git clone https://github.com/Anju982/YoutubeAssistant_RAG.git
 cd YoutubeAssistant_RAG
+```
+
+### Create a Virtual Environment:
+```plaintext
+python -m venv venv
+```
+
+### Activate the Virtual Environment:
+```plaintext
+venv\Scripts\activate
 ```
 
 ### Install dependencies:
