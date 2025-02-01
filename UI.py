@@ -1,88 +1,230 @@
-import UIHelper as helper
 import streamlit as st
+from typing import List, Optional
+from dataclasses import dataclass, field
 import textwrap
+from functools import lru_cache
+import UIHelper as helper
 
-st.set_page_config(layout="wide")
-st.title("YouTube Video Assistant")
-st.subheader("Powered by Googel Gemini")
+# Constants
+PAGE_TITLE = "YouTube Video Assistant"
+PAGE_ICON = "🎥"
+PAGE_LAYOUT = "wide"
 
-if 'docs' not in st.session_state:
-    st.session_state.docs = []
-if 'summary' not in st.session_state:
-    st.session_state.summary = ""
-if 'summary_points' not in st.session_state:
-    st.session_state.summary_points = []
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
-if 'db' not in st.session_state:
-    st.session_state.db = None
+@dataclass
+class SessionState:
+    """Dataclass to manage application state."""
+    docs: List = field(default_factory=list)
+    summary: str = ""
+    summary_points: List[str] = field(default_factory=list)
+    chat_history: List[dict] = field(default_factory=list)
+    db: Optional[object] = None
+    video_url: str = ""
 
-def process_video(url):
-    try:
-        with st.spinner("Analyzing video..."):
-            st.session_state.docs = helper.loadYouTubeVideo(url)
-            st.session_state.summary = helper.sumarizeWithGemini(st.session_state.docs)
-            st.session_state.summary_points = helper.display_summary(st.session_state.summary)
-            embedding_function = helper.embedingFunction()
-            st.session_state.db = helper.create_vector_store(st.session_state.docs, embedding_function)
-        st.success("Video analyzed successfully!")
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+    def clear_chat(self) -> None:
+        """Clear chat history."""
+        self.chat_history = []
 
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.subheader("Video Input")
-    youtube_url = st.text_input("Enter YouTube video URL:")
-    if st.button("Analyze New Video"):
-        st.session_state.chat_history = []  # Clear chat history for new video
-        process_video(youtube_url)
-
-    if st.session_state.summary:
-        with st.expander("Video Summary", expanded=False):
-            st.subheader("Key Points")
-            for point in st.session_state.summary_points:
-                if "Key fact" in point:
-                    st.markdown(f"- {point}")
-                else:
-                    st.markdown(f"**{point}**")
-
-with col2:
-    st.subheader("Chat with the Video Assistant")
+class YouTubeAssistant:
+    """Main application class for YouTube Video Assistant."""
     
-    if not st.session_state.docs:
-        st.info("Please enter a YouTube URL and click 'Analyze New Video' to start.")
-    else:
-        st.write("Ask multiple questions about the video. The assistant will remember the context.")
+    def __init__(self):
+        """Initialize the application."""
+        self._setup_page()
+        self._initialize_state()
         
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.write(message["content"])
+    @staticmethod
+    def _setup_page() -> None:
+        """Configure page settings."""
+        st.set_page_config(
+            layout=PAGE_LAYOUT,
+            page_title=PAGE_TITLE,
+            page_icon=PAGE_ICON
+        )
+        st.title(PAGE_TITLE)
+        st.subheader("Powered by Google Gemini")
 
-        question = st.chat_input("Ask a question about the video")
-        use_external_source = st.checkbox("Use External Source")
+    @staticmethod
+    def _initialize_state() -> None:
+        """Initialize session state if not exists."""
+        if 'state' not in st.session_state:
+            st.session_state.state = SessionState()
+
+    @staticmethod
+    @lru_cache(maxsize=100)
+    def _get_youtube_video_id(url: str) -> str:
+        """Extract YouTube video ID from URL with caching."""
+        if "v=" in url:
+            return url.split("v=")[1].split("&")[0]
+        elif "youtu.be/" in url:
+            return url.split("youtu.be/")[1].split("?")[0]
+        return ""
+
+    def _embed_youtube_video(self, url: str) -> None:
+        """Embed YouTube video player."""
+        video_id = self._get_youtube_video_id(url)
+        if video_id:
+            st.video(f"https://youtu.be/{video_id}")
+
+    def _process_video(self, url: str) -> None:
+        """Process YouTube video URL and update state."""
+        try:
+            with st.spinner("Analyzing video..."):
+                state = st.session_state.state
+                state.video_url = url
+                state.docs = helper.loadYouTubeVideo(url)
+                state.summary = helper.sumarizeWithGemini(state.docs)
+                state.summary_points = helper.display_summary(state.summary)
+                state.db = helper.create_vector_store(
+                    state.docs, 
+                    helper.embedingFunction()
+                )
+            st.success("Video analyzed successfully!")
+        except Exception as e:
+            st.error(f"Error processing video: {str(e)}")
+
+    def _render_video_section(self) -> None:
+        """Render video input section with controls."""
+        state = st.session_state.state
         
-        if question:
-            try:
-                st.session_state.chat_history.append({"role": "user", "content": question})
-                with st.chat_message("user"):
-                    st.write(question)
-                with st.chat_message("assistant"):
-                    with st.spinner("Thinking..."):
-                        relevant_contents = helper.getrelventDataFromDB(st.session_state.db, question)
-                        if use_external_source:
-                            answer = helper.optimizing_question_with_external_info(relevant_contents, question)
-                        else:
-                            answer = helper.optimizing_question(relevant_contents, question)
-                    
-                    st.write(textwrap.fill(answer, width=80))
+        with st.container():
+            st.subheader("Video Input")
+            youtube_url = st.text_input(
+                "Enter YouTube video URL:",
+                key="youtube_url",
+                placeholder="https://www.youtube.com/watch?v=..."
+            )
             
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
-            except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("Analyze New Video", help="Analyze the video and generate a summary"):
+                    state.clear_chat()
+                    self._process_video(youtube_url)
+            
+            with col2:
+                if st.button("Play Video", help="Embed and play the video"):
+                    if youtube_url:
+                        self._embed_youtube_video(youtube_url)
+                    else:
+                        st.warning("Please enter a YouTube URL first")
+            
+            if state.video_url:
+                with st.expander("Video Player", expanded=True):
+                    self._embed_youtube_video(state.video_url)
 
-        if st.button("Clear Chat History"):
-            st.session_state.chat_history = []
-            #st.experimental_rerun() 
+    def _display_summary(self) -> None:
+        """Display video summary in expandable section."""
+        state = st.session_state.state
+        if state.summary:
+            with st.expander("Video Summary", expanded=False):
+                st.subheader("Key Points")
+                for point in state.summary_points:
+                    st.markdown(f"- {point}")
+
+    def _handle_chat(self, question: str, use_external_source: bool) -> None:
+        """Process chat interactions."""
+        state = st.session_state.state
+        try:
+            state.chat_history.append({"role": "user", "content": question})
             
-st.markdown("<br><hr><p style='text-align: center;'>Developed by Anjana Urulugastenna @ 2024</p>", unsafe_allow_html=True)
+            relevant_contents = helper.getrelventDataFromDB(state.db, question)
+            answer = (
+                helper.optimizing_question_with_external_info(relevant_contents, question)
+                if use_external_source else
+                helper.optimizing_question(relevant_contents, question)
+            )
+            
+            state.chat_history.append({"role": "assistant", "content": answer})
+            
+        except Exception as e:
+            st.error(f"Chat error: {str(e)}")
+
+    def _render_chat_interface(self) -> None:
+        """Render chat interface with history and input."""
+        state = st.session_state.state
+        
+        st.subheader("Chat with the Video Assistant")
+        
+        if not state.docs:
+            st.info("Please enter a YouTube URL and click 'Analyze New Video' to start.")
+            return
+
+        with st.container():
+            st.write("Ask multiple questions about the video. The assistant will remember the context.")
+            
+            # Chat history
+            for message in state.chat_history:
+                with st.chat_message(message["role"]):
+                    st.write(textwrap.fill(message["content"], width=80))
+            
+            # Chat controls
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                use_external_source = st.checkbox(
+                    "Use External Source",
+                    key="external_source",
+                    help="Include external data sources in the response"
+                )
+            
+            with col2:
+                question = st.chat_input(
+                    "Ask a question about the video",
+                    key=f"chat_input_{len(state.chat_history)}"
+                )
+                
+                if question:
+                    self._handle_chat(question, use_external_source)
+                    st.rerun()
+            
+            if st.button("Clear Chat History", key="clear_chat", help="Clear the chat history"):
+                state.clear_chat()
+                st.rerun()
+
+    @staticmethod
+    def _render_footer() -> None:
+        """Render application footer."""
+        st.markdown("<br><hr>", unsafe_allow_html=True)
+        
+        cols = st.columns(3)
+        
+        with cols[0]:
+            st.markdown("""
+                **Contact Information**  
+                Website: [anjanau.com](https://anjanau.com)  
+                Email: contact@anjanau.com
+            """)
+        
+        with cols[1]:
+            st.markdown("""
+                **Additional Resources**
+                - [Documentation](https://anjanau.com/docs)
+                - [API Reference](https://anjanau.com/api)
+                - [Support](https://anjanau.com/support)
+            """)
+        
+        with cols[2]:
+            st.markdown("""
+                **About**  
+                Developed by [Anjana Urulugastenna](https://anjanau.com/about)  
+                © 2024 All rights reserved
+            """)
+
+    def run(self) -> None:
+        """Run the application."""
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            self._render_video_section()
+            self._display_summary()
+        
+        with col2:
+            self._render_chat_interface()
+        
+        self._render_footer()
+
+def main():
+    """Application entry point."""
+    app = YouTubeAssistant()
+    app.run()
+
+if __name__ == "__main__":
+    main()
