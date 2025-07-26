@@ -1,14 +1,54 @@
-# YouTube Video Assistant
+# YouTube Assistant RAG API
 
-Welcome to the **YouTube Video Assistant**! This application allows you to analyze YouTube videos, summarize the content, and engage in a question-and-answer dialogue about the video. The app uses various tools and technologies such as Streamlit, FAISS, Google Gemini, and Hugging Face Embeddings to provide a seamless and interactive experience.
+A production-ready YouTube video analysis service built with FastAPI, featuring AI-powered summarization, sentiment analysis, and intelligent question-answering using Retrieval-Augmented Generation (RAG) architecture.
 
-## Features
+## 🚀 Features
 
-- **YouTube Video Transcript Extraction**: Retrieve transcripts from YouTube videos using `YoutubeLoader`.
-- **Summarization with Google Gemini**: Summarize key points and main ideas from the video.
-- **Interactive Chat**: Ask questions about the video, and the assistant provides responses using context from the transcript.
-- **Optional External Sourcing**: Toggle to use external sources for more comprehensive answers.
-- **Vector Similarity Search**: Uses FAISS to fetch relevant video segments for better contextual responses.
+### **Core Functionality**
+- **YouTube Integration**: Fetch transcripts from any public YouTube video
+- **AI-Powered Analysis**: Generate summaries using Google's Gemini AI
+- **Intelligent Chat**: Converse with video content using RAG for contextual responses
+- **Background Processing**: Non-blocking video analysis with status monitoring
+
+### **Analysis Options**
+- **Multiple Summary Types**: Comprehensive, executive, bullet points, key topics
+- **Sentiment Analysis**: Understand the emotional tone of content
+- **Key Topic Extraction**: Identify main themes and subjects
+- **Suggested Questions**: AI-generated questions for deeper exploration
+
+### **API Features**
+- **RESTful Endpoints**: Complete REST API for integration
+- **Async Processing**: Background tasks for heavy operations
+- **Caching System**: In-memory caching for improved performance
+- **Auto Documentation**: Interactive API docs with Swagger/OpenAPI
+- **Health Monitoring**: Real-time status and metrics endpoints
+- **CORS Support**: Ready for web application integration
+
+## 🏗️ Architecture
+
+### **Backend (FastAPI)**
+- **Production-grade** async API server
+- **Background task processing** for video analysis
+- **In-memory caching** for performance optimization
+- **Comprehensive error handling** and validation
+- **Automatic API documentation** generation
+
+### **Frontend (Streamlit)**
+- **Modern interface** consuming the FastAPI backend
+- **Real-time status monitoring** of processing jobs
+- **Interactive chat** with processed videos
+- **Export functionality** for summaries and conversations
+
+## 🛠️ Technology Stack
+
+- **API Framework**: FastAPI with Pydantic validation
+- **Frontend**: Streamlit with custom styling
+- **AI Model**: Google Gemini 1.5 Flash
+- **Vector Database**: FAISS for similarity search
+- **Embeddings**: Sentence Transformers (all-MiniLM-L6-v2)
+- **Document Processing**: LangChain for text chunking and retrieval
+- **YouTube API**: youtube-transcript-api for transcript fetching
+- **Async Runtime**: Uvicorn ASGI server
 
 ## Introduction: Installing Python on Windows
 
@@ -48,52 +88,187 @@ This project uses a `.env` file to store sensitive API keys. Ensure your `.env` 
 ```plaintext
 GOOGEL_API_KEY=<Your Google Gemini API Key>
 ```
-## Installation
+## 🚀 Quick Start
 
-### Clone this repository:
-```plaintext
-git clone https://github.com/Anju982/YoutubeAssistant_RAG.git
-cd YoutubeAssistant_RAG
+### **Prerequisites**
+- Python 3.8+ 
+- Google API Key for Gemini AI
+
+### **Installation**
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Anju982/YoutubeAssistant_RAG.git
+   cd YoutubeAssistant_RAG
+   ```
+
+2. **Create a Virtual Environment**
+   ```bash
+   python -m venv venv
+   ```
+
+3. **Activate the Virtual Environment**
+   ```bash
+   venv\Scripts\activate
+   ```
+
+4. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### **Running the Application**
+
+#### **Option 1: FastAPI Backend + Streamlit Frontend (Recommended)**
+
+**Start the API server:**
+```bash
+python -m uvicorn api:app --reload --port 8001
 ```
 
-### Create a Virtual Environment:
-```plaintext
-python -m venv venv
+**Start the frontend (in new terminal):**
+```bash
+streamlit run frontend_api.py --server.port 8501
 ```
 
-### Activate the Virtual Environment:
-```plaintext
-venv\Scripts\activate
+- **API Documentation**: http://localhost:8001/docs
+- **Frontend Interface**: http://localhost:8501
+
+#### **Option 2: API-Only (for Integration)**
+
+```bash
+python -m uvicorn api:app --reload --port 8001
 ```
 
-### Install dependencies:
-```plaintext
-pip install -r requirements.txt
+Access interactive API docs at: http://localhost:8001/docs
+
+## 📋 API Endpoints
+
+### **Core Analysis**
+- `POST /api/v1/analyze` - Analyze YouTube video
+- `GET /api/v1/status/{video_id}` - Check processing status  
+- `GET /api/v1/analysis/{video_id}` - Get analysis results
+
+### **Chat & Interaction**
+- `POST /api/v1/chat` - Chat with video content
+- `GET /api/v1/sessions/{session_id}/history` - Get chat history
+
+### **Management**
+- `GET /health` - API health check
+- `GET /api/v1/videos` - List processed videos
+- `DELETE /api/v1/cache` - Clear cache
+
+## 🧪 Testing
+
+Run the included test suite:
+```bash
+python test_api.py
 ```
 
-### Run the app:
+## 📚 Usage Examples
 
-```plaintext
-streamlit run Ui.py
+### **Analyze a Video (cURL)**
+```bash
+curl -X POST "http://localhost:8001/api/v1/analyze" 
+     -H "Content-Type: application/json" 
+     -d '{
+       "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+       "summary_type": "comprehensive",
+       "include_sentiment": true,
+       "include_topics": true,
+       "include_questions": true
+     }'
 ```
 
-### Access the application at http://localhost:8501 in your browser.
+### **Chat with Video (Python)**
+```python
+import requests
 
-## Usage
+response = requests.post("http://localhost:8001/api/v1/chat", json={
+    "session_id": "my_session",
+    "message": "What are the main points discussed?",
+    "use_external_sources": False
+})
 
-- Enter a YouTube video URL and click Analyze New Video to retrieve and summarize the video transcript.
-- View the summary or engage in a chat with the assistant.
-- Use the Use External Source checkbox to toggle between using only the video transcript or incorporating external information.
-- Clear chat history as needed and start a new analysis if desired.
+print(response.json()["response"])
+```
 
-## Repository Structure
+## 🏗️ Project Structure
 
-- UI.py: The main application code for Streamlit interface and user interaction.
-- UIHelper.py: Contains helper functions for loading transcripts, summarizing content, and generating responses.
-- .env: Environment file for storing API keys securely.
+```
+YoutubeAssistant_RAG/
+├── api.py                 # FastAPI backend server
+├── frontend_api.py        # Streamlit frontend
+├── UIHelper.py           # Core business logic
+├── test_api.py           # API test suite
+├── requirements.txt      # Dependencies
+├── FASTAPI_COMPARISON.md # Architecture comparison
+└── README.md            # This file
+```
 
-## License
+## 🔧 Configuration
 
-- This project is licensed under the MIT License. Feel free to modify and distribute as needed.
+### **Environment Variables**
+Create a `.env` file with:
+```bash
+GOOGLE_API_KEY=your_google_gemini_api_key
+```
 
-Developed by Anjana Urulugastenna @ 2024
+### **API Configuration**
+The FastAPI server can be configured via environment variables:
+- `API_HOST`: Server host (default: 127.0.0.1)
+- `API_PORT`: Server port (default: 8001)  
+- `CACHE_SIZE`: Maximum cache entries (default: 100)
+
+## 🐳 Docker Deployment
+
+```dockerfile
+# Dockerfile example
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8001
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8001"]
+```
+
+```bash
+# Build and run
+docker build -t youtube-assistant .
+docker run -p 8001:8001 -e GOOGLE_API_KEY=your_key youtube-assistant
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit changes: `git commit -am 'Add feature'`
+4. Push to branch: `git push origin feature-name`
+5. Submit a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Google Gemini AI** for powerful language understanding
+- **FastAPI** for the robust API framework
+- **Streamlit** for rapid frontend development
+- **LangChain** for RAG implementation
+- **FAISS** for efficient vector similarity search
+
+## 📊 Performance & Scalability
+
+- **Concurrent Processing**: Handle multiple video analyses simultaneously
+- **Caching**: In-memory caching reduces processing time for repeated requests  
+- **Background Tasks**: Non-blocking operations for better user experience
+- **Resource Optimization**: Efficient memory and CPU usage patterns
+- **Production Ready**: Designed for enterprise deployment with monitoring and logging
+
+---
+
+**🎥 Start analyzing YouTube videos with AI-powered insights today!**
+
+*Developed by Anjana Urulugastenna @ 2024-2025*

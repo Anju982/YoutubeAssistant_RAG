@@ -1,26 +1,152 @@
 #Importing Libaries
-from langchain_community.document_loaders import YoutubeLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import  HuggingFaceEmbeddings
+from langchain.schema import Document
 from dotenv import load_dotenv
 import os
 import google.generativeai as genai
+import re
+import requests
+import json
+from datetime import datetime
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 load_dotenv()
-googelAPIKey = os.getenv('GOOGEL_API_KEY')
+google_api_key = os.getenv('GOOGLE_API_KEY')
+
+def extract_video_id(url):
+    """Extract video ID from YouTube URL."""
+    patterns = [
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
+        r'youtube\.com\/watch\?.*v=([^&\n?#]+)'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    
+    raise ValueError("Invalid YouTube URL format")
+
+def get_video_metadata(video_id):
+    """Get video metadata including title, thumbnail, duration, and channel info."""
+    try:
+        # Use YouTube oEmbed API (no API key required)
+        oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+        response = requests.get(oembed_url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Extract metadata
+            metadata = {
+                'title': data.get('title', f'YouTube Video: {video_id}'),
+                'author_name': data.get('author_name', 'Unknown Channel'),
+                'author_url': data.get('author_url', ''),
+                'thumbnail_url': data.get('thumbnail_url', ''),
+                'width': data.get('width', 0),
+                'height': data.get('height', 0),
+                'provider_name': data.get('provider_name', 'YouTube'),
+                'video_id': video_id,
+                'video_url': f"https://www.youtube.com/watch?v={video_id}"
+            }
+            
+            return metadata
+        else:
+            # Fallback metadata if API call fails
+            return {
+                'title': f'YouTube Video: {video_id}',
+                'author_name': 'Unknown Channel',
+                'author_url': '',
+                'thumbnail_url': f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg',
+                'video_id': video_id,
+                'video_url': f"https://www.youtube.com/watch?v={video_id}"
+            }
+    except Exception as e:
+        # Return basic metadata on error
+        return {
+            'title': f'YouTube Video: {video_id}',
+            'author_name': 'Unknown Channel',
+            'author_url': '',
+            'thumbnail_url': f'https://img.youtube.com/vi/{video_id}/maxresdefault.jpg',
+            'video_id': video_id,
+            'video_url': f"https://www.youtube.com/watch?v={video_id}",
+            'error': str(e)
+        }
+
 def loadYouTubeVideo(url):
     try:
-        loader = YoutubeLoader.from_youtube_url(url)
-        transcript = loader.load()
-        if not transcript:
-            raise ValueError("No transcript found for the provided URL.")
+        # Extract video ID from URL
+        video_id = extract_video_id(url)
         
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap = 100)
-        docs = text_splitter.split_documents(transcript)
-        return docs
+        # Get video metadata
+        metadata = get_video_metadata(video_id)
+        
+        # Create API instance
+        api = YouTubeTranscriptApi()
+        
+        # Get transcript using the current API
+        try:
+            # Check if transcripts are available and get the list
+            transcript_list = api.list(video_id)
+        except TranscriptsDisabled:
+            raise ValueError("Transcripts are disabled for this video.")
+        except Exception as e:
+            raise ValueError(f"Failed to get transcript list: {str(e)}")
+        
+        # Find English transcript or the first available one
+        transcript_data = None
+        transcript_language = "en"
+        try:
+            # Try to get English transcript first
+            transcript = transcript_list.find_transcript(['en'])
+            transcript_data = transcript.fetch()
+        except NoTranscriptFound:
+            try:
+                # If no English, try to get the first available transcript
+                for transcript in transcript_list:
+                    transcript_data = transcript.fetch()
+                    transcript_language = transcript.language_code
+                    break
+                if not transcript_data:
+                    raise ValueError("No transcript found for this video.")
+            except Exception as e:
+                raise ValueError(f"No transcript available: {str(e)}")
+        
+        if not transcript_data:
+            raise ValueError("No transcript data retrieved.")
+        
+        # Convert transcript to text with timestamps
+        transcript_text = " ".join([snippet.text for snippet in transcript_data])
+        
+        # Enhanced metadata with transcript info
+        enhanced_metadata = {
+            **metadata,
+            'source': url,
+            'transcript_language': transcript_language,
+            'transcript_length': len(transcript_data),
+            'processed_at': datetime.now().isoformat()
+        }
+        
+        # Create Document object with enhanced metadata
+        documents = [Document(
+            page_content=transcript_text,
+            metadata=enhanced_metadata
+        )]
+        
+        # Split the document into chunks
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+        docs = text_splitter.split_documents(documents)
+        
+        # Add metadata to all chunks
+        for doc in docs:
+            doc.metadata.update(enhanced_metadata)
+        
+        return docs, enhanced_metadata
+        
     except Exception as e:
-        raise RecursionError(f"Failed to load or process YouTube video: {str(e)}")
+        raise Exception(f"Failed to load or process YouTube video: {str(e)}")
 
 def embedingFunction():
     try:
@@ -36,38 +162,109 @@ def create_vector_store(docs, embedingFunctions):
     except Exception as e:
         raise ValueError(f"Failed to create vector store: {str(e)}")
 
-def sumarizeWithGemini(docs):
+def sumarizeWithGemini(docs, summary_type="comprehensive"):
+    """
+    Generate different types of summaries based on the summary_type parameter.
+    Types: 'comprehensive', 'executive', 'bullet_points', 'key_topics'
+    """
     try:
         combined_doc = " "
         for doc in docs:
             combined_doc += " " + doc.page_content
         
-        template = f"""
-                    Summarize the key points and main ideas from the following YouTube video transcript: {combined_doc}. Provide a comprehensive and informative summary, focusing on factual information from the transcript.
+        if summary_type == "executive":
+            template = f"""
+                        Create an executive summary of the following YouTube video transcript: {combined_doc}
+                        
+                        Provide a concise, professional summary suitable for executives or busy professionals. Include:
+                        
+                        * **Executive Overview:** 2-3 sentence summary of the main topic
+                        * **Key Insights:** 3-5 most important points or findings
+                        * **Business Implications:** Any relevant business or practical applications
+                        * **Action Items:** What viewers should do with this information
+                        
+                        Keep it under 300 words and focus on actionable insights.
+                        """
+        elif summary_type == "bullet_points":
+            template = f"""
+                        Create a bullet-point summary of the following YouTube video transcript: {combined_doc}
+                        
+                        Format as clear, concise bullet points organized by:
+                        
+                        **Main Topic:**
+                        • [Brief description]
+                        
+                        **Key Points:**
+                        • [Point 1]
+                        • [Point 2]
+                        • [Point 3]
+                        • [etc.]
+                        
+                        **Important Details:**
+                        • [Detail 1]
+                        • [Detail 2]
+                        • [etc.]
+                        
+                        **Conclusion:**
+                        • [Main takeaway]
+                        
+                        Use clear, concise language and focus on the most important information.
+                        """
+        elif summary_type == "key_topics":
+            template = f"""
+                        Analyze the following YouTube video transcript and extract key topics: {combined_doc}
+                        
+                        Identify and organize the content by main topics:
+                        
+                        **Topic 1: [Topic Name]**
+                        - Key points discussed
+                        - Important details
+                        
+                        **Topic 2: [Topic Name]**
+                        - Key points discussed
+                        - Important details
+                        
+                        **Topic 3: [Topic Name]**
+                        - Key points discussed
+                        - Important details
+                        
+                        **Cross-cutting Themes:**
+                        - Themes that appear across multiple topics
+                        
+                        Focus on organizing information thematically for easy reference.
+                        """
+        else:  # comprehensive (default)
+            template = f"""
+                        Summarize the key points and main ideas from the following YouTube video transcript: {combined_doc}. Provide a comprehensive and informative summary, focusing on factual information from the transcript.
 
-                    Specifically, address the following aspects:
+                        Specifically, address the following aspects:
 
-                    * **Main Topic:** What is the central subject of the video?
-                    * **Key Arguments/Points:**  What are the core arguments or points presented? Provide sufficient detail for each.
-                    * **Supporting Evidence/Examples:** What evidence, examples, or data are used to support these arguments?
-                    * **Important Details/Nuances:** Are there any crucial details, exceptions, or qualifications necessary for a complete understanding?
-                    * **Overall Conclusion/Takeaway:** What is the main conclusion or takeaway message conveyed in the video?
+                        * **Main Topic:** What is the central subject of the video?
+                        * **Key Arguments/Points:**  What are the core arguments or points presented? Provide sufficient detail for each.
+                        * **Supporting Evidence/Examples:** What evidence, examples, or data are used to support these arguments?
+                        * **Important Details/Nuances:** Are there any crucial details, exceptions, or qualifications necessary for a complete understanding?
+                        * **Overall Conclusion/Takeaway:** What is the main conclusion or takeaway message conveyed in the video?
 
-                    **Instructions:**
+                        **Instructions:**
 
-                    * Use only factual information from the transcript. Do not add information from external sources or speculate.
-                    * Be comprehensive. Aim for a detailed summary that captures the essence of the video, even if it means the summary is not extremely brief.  Prioritize information over brevity.
-                    * Organize the summary logically and use clear, concise language.
-
-                    """
-        genai.configure(api_key=googelAPIKey)
-        model = genai.GenerativeModel(model_name="gemini-pro")
+                        * Use only factual information from the transcript. Do not add information from external sources or speculate.
+                        * Be comprehensive. Aim for a detailed summary that captures the essence of the video, even if it means the summary is not extremely brief.  Prioritize information over brevity.
+                        * Organize the summary logically and use clear, concise language.
+                        """
+                        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         response = model.generate_content(template)
         if not response.text:
             raise ValueError("No response text found.")
         results = response.text
-        results = results.replace("\n", "")
-        return results
+        
+        # Don't remove newlines for better formatting in bullet points and topics
+        if summary_type in ["bullet_points", "key_topics"]:
+            return results
+        else:
+            results = results.replace("\n", " ")
+            return results
     except Exception as e:
         raise ValueError(f"Failed to summarize the video: {str(e)}")
 
@@ -102,8 +299,8 @@ def optimizing_question(relative_contents, query):
 
                         **Answer:**
                         """
-        genai.configure(api_key=googelAPIKey)
-        model = genai.GenerativeModel(model_name="gemini-pro")
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         response = model.generate_content(template)
         if not response.text:
             raise ValueError("No response text found.")
@@ -147,8 +344,8 @@ def optimizing_question_with_external_info(relative_contents, query):
 
                     **Answer:**
                     """
-        genai.configure(api_key=googelAPIKey)
-        model = genai.GenerativeModel(model_name="gemini-pro")
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
         response = model.generate_content(template)
         if not response.text:
             raise ValueError("No response text found.")
@@ -156,3 +353,146 @@ def optimizing_question_with_external_info(relative_contents, query):
         return results
     except Exception as e:
         raise ValueError(f"Failed to optimize the question: {str(e)}")
+
+def generate_suggested_questions(docs, num_questions=5):
+    """Generate relevant questions based on the video content."""
+    try:
+        combined_doc = " ".join([doc.page_content for doc in docs[:3]])  # Use first 3 chunks
+        
+        template = f"""
+                    Based on the following YouTube video transcript, generate {num_questions} thoughtful and relevant questions that viewers might want to ask about the content: {combined_doc}
+                    
+                    Generate questions that:
+                    1. Cover different aspects of the content
+                    2. Range from basic understanding to deeper analysis
+                    3. Are specific to the video content
+                    4. Would help viewers learn more about the topic
+                    
+                    Format your response as a numbered list:
+                    1. [Question 1]
+                    2. [Question 2]
+                    3. [Question 3]
+                    4. [Question 4]
+                    5. [Question 5]
+                    
+                    Make each question clear, specific, and engaging.
+                    """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(template)
+        if not response.text:
+            raise ValueError("No response text found.")
+        
+        # Parse questions into a list
+        questions_text = response.text
+        questions = []
+        for line in questions_text.split("\n"):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("•") or line.startswith("-")):
+                # Remove numbering and clean up
+                question = re.sub(r"^\d+\.?\s*", "", line)
+                question = re.sub(r"^[•\-]\s*", "", question)
+                if question:
+                    questions.append(question.strip())
+        
+        return questions[:num_questions]  # Ensure we do not exceed requested number
+        
+    except Exception as e:
+        raise ValueError(f"Failed to generate suggested questions: {str(e)}")
+
+def extract_key_topics(docs, num_topics=5):
+    """Extract key topics from the video content."""
+    try:
+        combined_doc = " ".join([doc.page_content for doc in docs])
+        
+        template = f"""
+                    Analyze the following YouTube video transcript and extract the {num_topics} most important topics or themes: {combined_doc}
+                    
+                    For each topic, provide:
+                    - A clear, concise topic name (2-4 words)
+                    - A brief description (1-2 sentences)
+                    
+                    Format your response as:
+                    **Topic 1: [Topic Name]**
+                    [Brief description]
+                    
+                    **Topic 2: [Topic Name]**
+                    [Brief description]
+                    
+                    Focus on the main themes, concepts, or subjects discussed in the video.
+                    """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(template)
+        if not response.text:
+            raise ValueError("No response text found.")
+        
+        return response.text
+        
+    except Exception as e:
+        raise ValueError(f"Failed to extract key topics: {str(e)}")
+
+def get_enhanced_search_results(db, query, k=12):
+    """Get search results with relevance scores and better formatting."""
+    try:
+        results = db.similarity_search_with_score(query, k=k)
+        
+        formatted_results = []
+        for doc, score in results:
+            formatted_results.append({
+                "content": doc.page_content,
+                "metadata": doc.metadata,
+                "relevance_score": float(score),
+                "snippet": doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
+            })
+        
+        # Sort by relevance (lower score = more relevant in FAISS)
+        formatted_results.sort(key=lambda x: x["relevance_score"])
+        
+        return formatted_results
+        
+    except Exception as e:
+        raise ValueError(f"Failed to get enhanced search results: {str(e)}")
+
+def analyze_video_sentiment(docs):
+    """Analyze the overall sentiment and tone of the video."""
+    try:
+        combined_doc = " ".join([doc.page_content for doc in docs[:5]])  # Use first 5 chunks
+        
+        template = f"""
+                    Analyze the sentiment and tone of the following YouTube video transcript: {combined_doc}
+                    
+                    Provide analysis on:
+                    
+                    **Overall Sentiment:**
+                    - Positive, Negative, or Neutral
+                    - Confidence level (High/Medium/Low)
+                    
+                    **Emotional Tone:**
+                    - Describe the general emotional tone (e.g., enthusiastic, serious, conversational, educational, etc.)
+                    
+                    **Speaker Attitude:**
+                    - How does the speaker appear to feel about the topic?
+                    
+                    **Content Mood:**
+                    - Is the content uplifting, concerning, informative, entertaining, etc.?
+                    
+                    **Key Emotional Indicators:**
+                    - Specific words or phrases that indicate the sentiment
+                    
+                    Keep the analysis objective and based solely on the transcript content.
+                    """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(template)
+        if not response.text:
+            raise ValueError("No response text found.")
+        
+        return response.text
+        
+    except Exception as e:
+        raise ValueError(f"Failed to analyze video sentiment: {str(e)}")
+
