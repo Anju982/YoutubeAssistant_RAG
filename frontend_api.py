@@ -6,11 +6,55 @@ This demonstrates how to use the FastAPI backend with a Streamlit frontend
 import streamlit as st
 import requests
 import time
+import os
 from typing import Dict, Any, List
 from datetime import datetime
 
-# FastAPI backend URL (adjust as needed)
-API_BASE_URL = "http://localhost:8001"
+# Dynamic FastAPI backend URL configuration
+def get_api_base_url():
+    """Get the appropriate API base URL based on environment"""
+    # Check if running in network mode (environment variable)
+    if os.getenv('FASTAPI_HOST'):
+        return f"http://{os.getenv('FASTAPI_HOST')}:{os.getenv('FASTAPI_PORT', '8001')}"
+    
+    # Try to detect current host from Streamlit
+    try:
+        # Get the current URL from Streamlit (if available)
+        if hasattr(st, '_get_websocket_headers'):
+            headers = st._get_websocket_headers()
+            if headers and 'host' in headers:
+                host = headers['host'].split(':')[0]
+                return f"http://{host}:8001"
+    except:
+        pass
+    
+    # Check if we can access localhost
+    try:
+        response = requests.get("http://localhost:8001/health", timeout=2)
+        if response.status_code == 200:
+            return "http://localhost:8001"
+    except:
+        pass
+    
+    # Try common network configurations
+    import socket
+    try:
+        # Get local IP address
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        
+        # Test if FastAPI is running on local IP
+        test_response = requests.get(f"http://{local_ip}:8001/health", timeout=2)
+        if test_response.status_code == 200:
+            return f"http://{local_ip}:8001"
+    except:
+        pass
+    
+    # Default fallback
+    return "http://localhost:8001"
+
+# Initialize API base URL
+API_BASE_URL = get_api_base_url()
 
 # Page configuration
 st.set_page_config(
@@ -404,6 +448,147 @@ st.markdown("""
     border: 2px solid #3d4a6a;
 }
 
+/* Select Box Dropdown Styling - Fix overlay issue */
+.stSelectbox > div > div > div > div {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    border: 2px solid #3d4a6a !important;
+    z-index: 9999 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Select Box Options */
+.stSelectbox [role="listbox"] {
+    background: #34495e !important;
+    border: 2px solid #3d4a6a !important;
+    z-index: 9999 !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+}
+
+.stSelectbox [role="option"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.stSelectbox [role="option"]:hover {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+.stSelectbox [aria-selected="true"] {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+/* Sidebar Selectbox specific styling - Enhanced for better visibility */
+[data-testid="stSidebar"] .stSelectbox > div > div > div {
+    background: #34495e !important;
+    border: 2px solid #3d4a6a !important;
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+/* CRITICAL: Summary dropdown absolute positioning to prevent overlap */
+[data-testid="stSidebar"] .stSelectbox[data-testid="stSelectbox"] {
+    position: relative !important;
+    z-index: 1000 !important;
+    margin-bottom: 2rem !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [role="listbox"] {
+    background: #34495e !important;
+    border: 2px solid #4c72c4 !important;
+    z-index: 999999 !important;
+    box-shadow: 0 12px 40px rgba(76, 114, 196, 0.8) !important;
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    min-width: 280px !important;
+    max-height: 250px !important;
+    overflow-y: auto !important;
+    border-radius: 8px !important;
+    margin-top: 4px !important;
+    transform: translateZ(0) !important;
+}
+
+/* Force dropdown to appear above all content */
+[data-testid="stSidebar"] .stSelectbox:focus-within [role="listbox"],
+[data-testid="stSidebar"] .stSelectbox:hover [role="listbox"] {
+    z-index: 999999 !important;
+    position: absolute !important;
+    display: block !important;
+}
+
+/* Ensure dropdown options are fully visible */
+[data-testid="stSidebar"] .stSelectbox [role="option"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1px solid #3d4a6a !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    font-size: 0.9rem !important;
+    line-height: 1.2 !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [role="option"]:hover {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox [aria-selected="true"] {
+    background: #5a67d8 !important;
+    color: #f0f2f5 !important;
+}
+
+/* CRITICAL: Prevent dropdown overlap with Analysis Features */
+[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 2.5rem !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    clear: both !important;
+}
+
+/* Analysis Features section spacing */
+[data-testid="stSidebar"] .stMarkdown {
+    margin: 1rem 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
+    clear: both !important;
+}
+
+/* Ensure checkboxes don't interfere with dropdown */
+[data-testid="stSidebar"] .stCheckbox {
+    margin: 0.5rem 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
+    clear: both !important;
+}
+
+/* Force clear spacing between sections */
+[data-testid="stSidebar"] .element-container {
+    margin-bottom: 0.5rem !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Ensure sidebar sections have proper spacing and positioning */
+[data-testid="stSidebar"] .stMarkdown {
+    margin-bottom: 1rem !important;
+    position: relative !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox {
+    margin: 0.5rem 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
 /* Multiselect Styling */
 .stMultiSelect > div > div > div {
     background: #34495e;
@@ -430,20 +615,69 @@ st.markdown("""
 /* Sidebar */
 [data-testid="stSidebar"] {
     background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
+    width: 300px !important;
+    overflow: visible !important;
 }
 
 [data-testid="stSidebar"] > div {
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    padding: 1rem 0.5rem !important;
+    overflow: visible !important;
+}
+
+/* Ensure sidebar can display dropdowns properly */
+[data-testid="stSidebar"] .element-container {
+    overflow: visible !important;
+    position: relative !important;
+}
+
+/* Compact sidebar elements for better space utilization */
+[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 0.5rem !important;
+    position: relative !important;
+    overflow: visible !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox {
+    margin: 0.2rem 0 !important;
+}
+
+[data-testid="stSidebar"] .stMetric {
+    background: rgba(76, 114, 196, 0.1) !important;
+    border: 1px solid #3d4a6a !important;
+    border-radius: 8px !important;
+    padding: 0.5rem !important;
+    margin: 0.3rem 0 !important;
+}
+
+[data-testid="stSidebar"] .stExpander {
+    margin: 0.5rem 0 !important;
+}
+
+[data-testid="stSidebar"] .stButton > button {
+    font-size: 0.85rem !important;
+    padding: 0.4rem 0.8rem !important;
+    margin: 0.2rem 0 !important;
 }
 
 /* All containers */
 .stContainer, .block-container {
     background: transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
 }
 
 /* Columns */
 [data-testid="column"] {
     background: transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Main content area should not interfere with sidebar dropdowns */
+.main .block-container {
+    position: relative !important;
+    z-index: 1 !important;
 }
 
 /* Expander */
@@ -479,6 +713,30 @@ st.markdown("""
 /* All text elements */
 .stMarkdown, .stText, p, h1, h2, h3, h4, h5, h6, span, div {
     color: #e0e0e0 !important;
+}
+
+/* Sidebar content organization and spacing */
+[data-testid="stSidebar"] .element-container {
+    margin-bottom: 1rem !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 1.5rem !important;
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox {
+    margin: 0.5rem 0 !important;
+    position: relative !important;
+    z-index: 1 !important;
+    clear: both !important;
+}
+
+[data-testid="stSidebar"] .stMarkdown h3 {
+    margin-top: 2rem !important;
+    margin-bottom: 1rem !important;
+    clear: both !important;
 }
 
 /* Override any remaining white backgrounds */
@@ -535,12 +793,52 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def check_api_health() -> bool:
-    """Check if FastAPI backend is running"""
+    """Check if FastAPI backend is running with enhanced error handling"""
     try:
         response = requests.get(f"{API_BASE_URL}/health", timeout=5)
         return response.status_code == 200
+    except requests.exceptions.ConnectionError:
+        # Try alternative health endpoints
+        try:
+            response = requests.get(f"{API_BASE_URL}/", timeout=3)
+            return response.status_code in [200, 404]  # 404 is OK, means server is running
+        except:
+            return False
+    except requests.exceptions.Timeout:
+        return False
     except Exception:
         return False
+
+def get_api_status_info() -> Dict[str, Any]:
+    """Get detailed API status information"""
+    status_info = {
+        "api_url": API_BASE_URL,
+        "reachable": False,
+        "response_time": None,
+        "error": None
+    }
+    
+    try:
+        start_time = time.time()
+        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        status_info["response_time"] = round(time.time() - start_time, 2)
+        
+        if response.status_code == 200:
+            status_info["reachable"] = True
+            try:
+                status_info["backend_info"] = response.json()
+            except:
+                status_info["backend_info"] = {"message": "Backend responding"}
+        else:
+            status_info["error"] = f"HTTP {response.status_code}"
+    except requests.exceptions.ConnectionError:
+        status_info["error"] = "Connection refused - Backend not running or wrong URL"
+    except requests.exceptions.Timeout:
+        status_info["error"] = "Connection timeout - Backend too slow or network issues"
+    except Exception as e:
+        status_info["error"] = str(e)
+    
+    return status_info
 
 def analyze_video_api(url: str, summary_type: str, sentiment: bool, topics: bool, questions: bool) -> Dict[str, Any]:
     """Call the FastAPI analyze endpoint"""
@@ -618,6 +916,9 @@ def get_trend_results(analysis_id: str) -> Dict[str, Any]:
     return response.json()
 
 def main():
+    # Declare global variable at the beginning
+    global API_BASE_URL
+    
     # Professional Header with Personal Branding
     st.markdown("""
     <div class="main-header">
@@ -630,12 +931,135 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Check API health
-    if not check_api_health():
-        st.error("❌ FastAPI backend is not running! Please start it with: `./start.sh backend`")
-        st.stop()
+    # API Configuration Section - Compact version with analysis settings
+    with st.sidebar:
+        # Compact API status indicator at top
+        api_health = check_api_health()
+        status_color = "#4c72c4" if api_health else "#e74c3c"
+        status_text = "✅ Connected" if api_health else "❌ Disconnected"
+        
+        st.markdown(f"""
+        <div style="background: {status_color}; color: white; padding: 0.5rem; 
+                    border-radius: 8px; text-align: center; margin-bottom: 1rem; font-size: 0.9rem;">
+            <strong>{status_text}</strong> | API: {API_BASE_URL.split('://')[1] if '://' in API_BASE_URL else API_BASE_URL}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Analysis Settings Header
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #4c72c4 0%, #5a67d8 100%); 
+                    color: #f0f2f5; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; text-align: center;
+                    border: 1px solid #3d4a6a; box-shadow: 0 4px 15px rgba(76, 114, 196, 0.3);">
+            <h3 style="margin: 0; color: #f0f2f5; font-size: 1.1rem;">🎯 Analysis Settings</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Compact form layout
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            summary_type = st.selectbox(
+                "📝 Summary",
+                ["comprehensive", "executive", "bullet_points", "key_topics"],
+                help="Summary type",
+                key="summary_type"
+            )
+            # Add explicit spacing after Summary dropdown
+            st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+        
+        with col2:
+            # Quick status indicator
+            try:
+                videos_response = requests.get(f"{API_BASE_URL}/api/v1/videos", timeout=1)
+                if videos_response.status_code == 200:
+                    videos_data = videos_response.json()
+                    st.metric("📊 Videos", videos_data['total'])
+                else:
+                    st.metric("📊 Videos", "N/A")
+            except:
+                st.metric("📊 Videos", "N/A")
+        
+        # Add clear spacing before Analysis Features
+        st.markdown("<div style='height: 2rem; clear: both;'></div>", unsafe_allow_html=True)
+        
+        # Compact analysis features in two columns
+        st.markdown("**📊 Analysis Features**")
+        col3, col4 = st.columns([1, 1])
+        
+        with col3:
+            include_sentiment = st.checkbox("😊 Sentiment", value=False, help="Emotional tone analysis", key="include_sentiment")
+            include_topics = st.checkbox("🎯 Topics", value=True, help="Key themes extraction", key="include_topics")
+        
+        with col4:
+            include_questions = st.checkbox("❓ Questions", value=True, help="Suggested questions", key="include_questions")
+            # Quick refresh button
+            if st.button("🔄", help="Refresh status"):
+                st.rerun()
+        
+        # API Configuration in expandable section
+        with st.expander("🔧 API Configuration", expanded=False):
+            st.markdown(f"**Current:** `{API_BASE_URL}`")
+            
+            custom_api_url = st.text_input(
+                "Custom API URL:",
+                placeholder="http://server-ip:8001",
+                help="Enter custom FastAPI URL if needed"
+            )
+            
+            if custom_api_url and custom_api_url != API_BASE_URL:
+                if st.button("🔄 Update API URL"):
+                    API_BASE_URL = custom_api_url.rstrip('/')
+                    st.rerun()
+            
+            if st.button("🔍 Test Connection"):
+                with st.spinner("Testing..."):
+                    health_status = check_api_health()
+                    if health_status:
+                        st.success("✅ API responsive")
+                    else:
+                        st.error("❌ Cannot connect")
+                        st.info("💡 For network access: `uvicorn api:app --host 0.0.0.0 --port 8001`")
+        
+        # Compact branding
+        st.markdown("""
+        <div style="margin-top: 1rem; padding: 0.8rem; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
+                    border-radius: 8px; text-align: center; border: 1px solid #3d4a6a;">
+            <small style="color: #bdc3c7;">by <strong style="color: #f0f2f5;">Anjana U.</strong><br>
+            <a href="https://anjanau.com/" target="_blank" style="color: #74a7ff; text-decoration: none;">anjanau.com</a></small>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Check API health with enhanced error handling
+    api_status = check_api_health()
+    if not api_status:
+        st.error(f"❌ FastAPI backend is not accessible at: `{API_BASE_URL}`")
+        
+        # Provide helpful suggestions
+        st.markdown("""
+        ### 🔧 Backend Connection Issues
+        
+        **If accessing from a different device:**
+        1. **Start FastAPI for network access:**
+           ```bash
+           uvicorn api:app --host 0.0.0.0 --port 8001
+           ```
+        
+        2. **Update the API URL in the sidebar** to use your server's IP address:
+           - Example: `http://192.168.1.100:8001`
+           - Replace `192.168.1.100` with your actual server IP
+        
+        3. **Check firewall settings** - ensure port 8001 is open
+        
+        **If running locally:**
+        - Start the backend with: `./start.sh backend` or `python api.py`
+        
+        **Current API URL:** `{API_BASE_URL}`
+        """)
+        
+        # Don't stop the app, allow users to configure API URL
+        st.warning("⚠️ Some features may not work without backend connection")
     else:
-        st.success("✅ Connected to FastAPI backend")
+        st.success(f"✅ Connected to FastAPI backend at: `{API_BASE_URL}`")
     
     # Initialize session state
     if 'video_id' not in st.session_state:
@@ -744,61 +1168,11 @@ def main():
 
 def render_single_video_tab():
     """Render the single video analysis tab"""
-    # Professional Sidebar configuration
-    with st.sidebar:
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #4c72c4 0%, #5a67d8 100%); 
-                    color: #f0f2f5; padding: 1.5rem; border-radius: 15px; margin-bottom: 2rem; text-align: center;
-                    border: 1px solid #3d4a6a; box-shadow: 0 4px 15px rgba(76, 114, 196, 0.3);">
-            <h3 style="margin: 0; color: #f0f2f5;">🎯 Analysis Settings</h3>
-            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; color: #e8e8e8;">Configure your video analysis</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        summary_type = st.selectbox(
-            "📝 Summary Type",
-            ["comprehensive", "executive", "bullet_points", "key_topics"],
-            help="Choose the type of summary you want"
-        )
-        
-        st.markdown("### 📊 Analysis Features")
-        include_sentiment = st.checkbox("😊 Sentiment Analysis", value=False, help="Analyze emotional tone")
-        include_topics = st.checkbox("🎯 Key Topics", value=True, help="Extract main themes")
-        include_questions = st.checkbox("❓ Suggested Questions", value=True, help="Generate relevant questions")
-        
-        st.markdown("### 🔧 System Status")
-        if st.button("🔄 Refresh Status", help="Check system status"):
-            st.rerun()
-        
-        # Show processed videos with professional styling
-        try:
-            videos_response = requests.get(f"{API_BASE_URL}/api/v1/videos")
-            if videos_response.status_code == 200:
-                videos_data = videos_response.json()
-                st.markdown(f"""
-                <div class="metric-container">
-                    <h4 style="margin: 0; color: #4c72c4;">📊 System Metrics</h4>
-                    <p style="margin: 0.5rem 0 0 0;">Processed Videos: <strong>{videos_data['total']}</strong></p>
-                </div>
-                """, unsafe_allow_html=True)
-        except Exception:
-            st.markdown("""
-            <div class="metric-container" style="border-left-color: #ffc107;">
-                <h4 style="margin: 0; color: #ffc107;">⚠️ Status Unknown</h4>
-                <p style="margin: 0.5rem 0 0 0;">Could not fetch video count</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Professional branding in sidebar
-        st.markdown("""
-        <div style="margin-top: 2rem; padding: 1rem; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
-                    border-radius: 10px; text-align: center; border: 1px solid #3d4a6a; 
-                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <small style="color: #e0e0e0;"><strong style="color: #f0f2f5;">Developed by</strong><br>
-            <span style="color: #bdc3c7;">Anjana Urulugastenna</span><br>
-            <a href="https://anjanau.com/" target="_blank" style="color: #74a7ff; text-decoration: none;">anjanau.com</a></small>
-        </div>
-        """, unsafe_allow_html=True)
+    # Get analysis settings from session state (set by sidebar)
+    summary_type = st.session_state.get('summary_type', 'comprehensive')
+    include_sentiment = st.session_state.get('include_sentiment', False)
+    include_topics = st.session_state.get('include_topics', True)
+    include_questions = st.session_state.get('include_questions', True)
     
     # Main content with professional styling
     col1, col2 = st.columns([1, 1])

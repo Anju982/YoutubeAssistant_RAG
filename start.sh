@@ -34,23 +34,50 @@ fi
 # Activate virtual environment
 source venv/bin/activate
 
-# Function to start FastAPI backend
+# Function to start backend
 start_backend() {
-    echo -e "${GREEN}🚀 Starting FastAPI Backend...${NC}"
-    python -m uvicorn api:app --reload --port 8001 &
+    echo -e "${GREEN}🚀 Starting FastAPI backend...${NC}"
+    source venv/bin/activate
+    
+    # Check if running in network mode
+    if [ "$NETWORK_MODE" = "true" ]; then
+        LOCAL_IP=$(hostname -I | awk '{print $1}')
+        echo -e "🌐 Network mode enabled - Backend accessible at: ${BLUE}http://$LOCAL_IP:8001${NC}"
+        python -m uvicorn api:app --host 0.0.0.0 --port 8001 --reload &
+    else
+        python -m uvicorn api:app --host 127.0.0.1 --port 8001 --reload &
+    fi
+    
     BACKEND_PID=$!
     echo "Backend PID: $BACKEND_PID"
     
-    # Wait for backend to start
-    echo "Waiting for backend to start..."
-    for i in {1..10}; do
-        if curl -s http://localhost:8001/health > /dev/null 2>&1; then
-            echo -e "${GREEN}✅ Backend started successfully!${NC}"
-            echo -e "📖 API Documentation: ${BLUE}http://localhost:8001/docs${NC}"
-            break
-        fi
-        sleep 1
-    done
+    if [ "$NETWORK_MODE" != "true" ]; then
+        echo -e "🔗 Backend API: ${BLUE}http://localhost:8001${NC}"
+    fi
+}
+
+# Function to start frontend
+start_frontend() {
+    echo -e "${GREEN}🎨 Starting Streamlit frontend...${NC}"
+    source venv/bin/activate
+    
+    # Set environment variables for network mode
+    if [ "$NETWORK_MODE" = "true" ]; then
+        LOCAL_IP=$(hostname -I | awk '{print $1}')
+        export FASTAPI_HOST="$LOCAL_IP"
+        export FASTAPI_PORT="8001"
+        echo -e "🌐 Network mode enabled - Frontend accessible at: ${BLUE}http://$LOCAL_IP:8501${NC}"
+        streamlit run frontend_api.py --server.address 0.0.0.0 --server.port 8501 &
+    else
+        streamlit run frontend_api.py --server.port 8501 &
+    fi
+    
+    FRONTEND_PID=$!
+    echo "Frontend PID: $FRONTEND_PID"
+    
+    if [ "$NETWORK_MODE" != "true" ]; then
+        echo -e "🌐 Frontend Interface: ${BLUE}http://localhost:8501${NC}"
+    fi
 }
 
 # Function to start Streamlit frontend
@@ -99,6 +126,31 @@ case "${1:-both}" in
         echo -e "Press Ctrl+C to stop all services"
         wait
         ;;
+    "network")
+        echo -e "${BLUE}🌐 Starting in network mode...${NC}"
+        LOCAL_IP=$(hostname -I | awk '{print $1}')
+        echo -e "📋 Access URLs:"
+        echo -e "   Frontend: ${BLUE}http://$LOCAL_IP:8501${NC}"
+        echo -e "   Backend:  ${BLUE}http://$LOCAL_IP:8001${NC}"
+        echo ""
+        export NETWORK_MODE=true
+        start_backend
+        sleep 3
+        start_frontend
+        echo -e "${GREEN}🎉 Both services started in network mode!${NC}"
+        echo -e "${YELLOW}💡 Other devices can now access the application${NC}"
+        echo -e "Press Ctrl+C to stop all services"
+        wait
+        ;;
+    "backend-network")
+        echo -e "${BLUE}🌐 Starting backend in network mode...${NC}"
+        LOCAL_IP=$(hostname -I | awk '{print $1}')
+        echo -e "Backend accessible at: ${BLUE}http://$LOCAL_IP:8001${NC}"
+        export NETWORK_MODE=true
+        start_backend
+        echo -e "${GREEN}Press Ctrl+C to stop the backend${NC}"
+        wait $BACKEND_PID
+        ;;
     "test")
         echo -e "${BLUE}🧪 Running API tests...${NC}"
         python test_api.py
@@ -108,12 +160,16 @@ case "${1:-both}" in
         python test_new_features.py
         ;;
     *)
-        echo "Usage: $0 [backend|frontend|both|test|test-new]"
-        echo "  backend   - Start only FastAPI backend"
-        echo "  frontend  - Start only Streamlit frontend"  
-        echo "  both      - Start both services (default)"
-        echo "  test      - Run API tests"
-        echo "  test-new  - Test new Comparative & Trend Analysis features"
+        echo "Usage: $0 [backend|frontend|both|network|backend-network|test|test-new]"
+        echo "  backend          - Start only FastAPI backend (localhost)"
+        echo "  frontend         - Start only Streamlit frontend (localhost)"  
+        echo "  both             - Start both services (localhost, default)"
+        echo "  network          - Start both services for network access"
+        echo "  backend-network  - Start only backend for network access"
+        echo "  test             - Run API tests"
+        echo "  test-new         - Test new Comparative & Trend Analysis features"
+        echo ""
+        echo "Network mode allows access from other devices on the same network"
         exit 1
         ;;
 esac

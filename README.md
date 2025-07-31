@@ -54,6 +54,68 @@ A production-ready YouTube video analysis service built with FastAPI, featuring 
 - **Export functionality** for summaries, comparisons, and conversations
 - **Dynamic URL management** for bulk video input
 
+## 🌐 Network Access Setup
+
+### For Local Access Only
+```bash
+./start.sh both
+```
+
+### For Network Access (Multiple Devices)
+```bash
+# Option 1: Start both services for network access
+./start.sh network
+
+# Option 2: Use the dedicated network setup script
+./start_network.sh
+
+# Option 3: Start backend only for network access
+./start.sh backend-network
+```
+
+### Manual Network Setup
+If you need to start services manually for network access:
+
+```bash
+# Start FastAPI backend (accessible from other devices)
+uvicorn api:app --host 0.0.0.0 --port 8001
+
+# Start Streamlit frontend (accessible from other devices)
+streamlit run frontend_api.py --server.address 0.0.0.0 --server.port 8501
+```
+
+### Network Configuration
+When accessing from other devices:
+
+1. **Find your server IP address:**
+   ```bash
+   hostname -I | awk '{print $1}'
+   ```
+
+2. **Access the application:**
+   - Frontend: `http://YOUR_SERVER_IP:8501`
+   - Backend API: `http://YOUR_SERVER_IP:8001`
+
+3. **Configure API URL in the app:**
+   - Open the frontend web interface
+   - Go to sidebar → API Configuration
+   - Enter: `http://YOUR_SERVER_IP:8001`
+   - Click "Update API URL"
+
+### Firewall Configuration
+If you have firewall enabled, allow the required ports:
+
+```bash
+# Ubuntu/Debian
+sudo ufw allow 8501
+sudo ufw allow 8001
+
+# CentOS/RHEL
+sudo firewall-cmd --permanent --add-port=8501/tcp
+sudo firewall-cmd --permanent --add-port=8001/tcp
+sudo firewall-cmd --reload
+```
+
 ## 🛠️ Technology Stack
 
 - **API Framework**: FastAPI with Pydantic validation
