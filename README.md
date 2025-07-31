@@ -1,6 +1,10 @@
 # YouTube Assistant RAG API
 
-A production-ready YouTube video analysis service built with FastAPI, featuring AI-powered summarization, sentiment analysis, and intelligent question-answering using Retrieval-Augmented Generation (RAG) architecture.
+**Advanced AI-powered YouTube video analysis platform with comparative analysis and trend identification capabilities.**
+
+**Developed by [Anjana Urulugastenna](https://anjanau.com/) - Quantitative Analyst & AI Engineer**
+
+A production-ready YouTube video analysis service built with FastAPI, featuring AI-powered summarization, sentiment analysis, comparative analysis, trend analysis, and intelligent question-answering using Retrieval-Augmented Generation (RAG) architecture.
 
 ## 🚀 Features
 
@@ -15,6 +19,12 @@ A production-ready YouTube video analysis service built with FastAPI, featuring 
 - **Sentiment Analysis**: Understand the emotional tone of content
 - **Key Topic Extraction**: Identify main themes and subjects
 - **Suggested Questions**: AI-generated questions for deeper exploration
+
+### **🆕 Advanced Analysis Features**
+- **🔍 Comparative Analysis**: Compare 2-10 videos on similar topics to identify differences, similarities, and unique insights
+- **📈 Trend Analysis**: Analyze patterns across 3-50 videos over time to track topic evolution and emerging themes
+- **🤖 AI-Powered Insights**: Generate actionable insights from comparative and trend analysis
+- **📊 Multi-Grouping Options**: Temporal, topical, or channel-based analysis grouping
 
 ### **API Features**
 - **RESTful Endpoints**: Complete REST API for integration
@@ -34,10 +44,15 @@ A production-ready YouTube video analysis service built with FastAPI, featuring 
 - **Automatic API documentation** generation
 
 ### **Frontend (Streamlit)**
-- **Modern interface** consuming the FastAPI backend
+- **Modern tabbed interface** with four main sections:
+  - 🎬 **Single Video Analysis**: Traditional single video processing
+  - ⚖️ **Compare Videos**: Side-by-side comparison of multiple videos
+  - 📈 **Trend Analysis**: Multi-video trend identification and forecasting
+  - 💬 **Chat Interface**: Interactive Q&A with analyzed content
 - **Real-time status monitoring** of processing jobs
 - **Interactive chat** with processed videos
-- **Export functionality** for summaries and conversations
+- **Export functionality** for summaries, comparisons, and conversations
+- **Dynamic URL management** for bulk video input
 
 ## 🛠️ Technology Stack
 
@@ -269,6 +284,36 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**🎥 Start analyzing YouTube videos with AI-powered insights today!**
+## 👨‍💻 Developer
 
-*Developed by Anjana Urulugastenna @ 2024-2025*
+**Anjana Urulugastenna**  
+*Quantitative Analyst & AI Engineer*
+
+� **Website:** [anjanau.com](https://anjanau.com/)  
+💼 **Expertise:** AI/ML Engineering, Quantitative Analysis, Full-Stack Development  
+🚀 **Specialization:** Advanced AI systems, RAG architectures, Financial Technology
+
+---
+
+## 📄 License & Copyright
+
+**© 2025 Anjana Urulugastenna. All rights reserved.**
+
+This software is proprietary and confidential. Unauthorized copying, distribution, or use of this software, via any medium, is strictly prohibited without the express written permission of Anjana Urulugastenna.
+
+For licensing inquiries or commercial use, please contact via [anjanau.com](https://anjanau.com/).
+
+---
+
+## 🎯 Project Information
+
+- **Project:** YouTube Assistant RAG API
+- **Version:** 2.0.0
+- **Status:** Production Ready
+- **Last Updated:** July 2025
+- **Technologies:** Python, FastAPI, Streamlit, Google Gemini AI, LangChain, FAISS
+- **Architecture:** Microservices with RAG (Retrieval-Augmented Generation)
+
+**�🎥 Start analyzing YouTube videos with AI-powered insights today!**
+
+*Built with ❤️ by [Anjana Urulugastenna](https://anjanau.com/)*

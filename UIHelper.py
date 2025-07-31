@@ -496,3 +496,278 @@ def analyze_video_sentiment(docs):
     except Exception as e:
         raise ValueError(f"Failed to analyze video sentiment: {str(e)}")
 
+# Comparative Analysis Functions
+def compare_videos_analysis(videos_data, aspects, depth):
+    """Compare multiple videos based on specified aspects"""
+    try:
+        # Prepare comparison data
+        comparison_template = f"""
+        You are an expert content analyst. Compare the following {len(videos_data)} YouTube videos based on these aspects: {', '.join(aspects)}.
+        
+        Analysis Depth: {depth}
+        
+        Videos to Compare:
+        """
+        
+        for i, video in enumerate(videos_data, 1):
+            metadata = video.get('metadata', {})
+            analysis = video.get('analysis', {})
+            
+            comparison_template += f"""
+            
+            **Video {i}: {metadata.get('title', 'Unknown Title')}**
+            - Channel: {metadata.get('author_name', 'Unknown')}
+            - URL: {video.get('url', '')}
+            - Summary: {analysis.get('summary', 'No summary available')[:300]}...
+            - Topics: {analysis.get('topics', 'No topics available')[:200]}...
+            - Sentiment: {analysis.get('sentiment', 'No sentiment analysis')[:150]}...
+            """
+        
+        comparison_template += f"""
+        
+        **Comparison Analysis Instructions:**
+        
+        1. **Content Comparison**: Compare the main topics, themes, and key points discussed in each video.
+        
+        2. **Approach Analysis**: How do the creators approach their subjects differently?
+        
+        3. **Sentiment Comparison**: Compare the emotional tone and sentiment across videos.
+        
+        4. **Depth & Quality**: Evaluate the depth of coverage and quality of information.
+        
+        5. **Target Audience**: Identify the intended audience for each video.
+        
+        6. **Unique Insights**: What unique perspectives or insights does each video offer?
+        
+        7. **Complementary Content**: How do these videos complement each other?
+        
+        8. **Recommendations**: Which video would you recommend for different types of viewers and why?
+        
+        **Format your response with clear sections:**
+        - **Overview Summary**
+        - **Content Comparison**
+        - **Approach & Style Analysis**
+        - **Sentiment Analysis**
+        - **Quality Assessment**
+        - **Audience Targeting**
+        - **Unique Value Propositions**
+        - **Complementary Insights**
+        - **Recommendations**
+        """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(comparison_template)
+        
+        if not response.text:
+            raise ValueError("No comparison response generated.")
+        
+        # Parse and structure the comparison results
+        comparison_results = {
+            "comparison_analysis": response.text,
+            "videos_count": len(videos_data),
+            "aspects_analyzed": aspects,
+            "analysis_depth": depth,
+            "summary_stats": {
+                "total_videos": len(videos_data),
+                "channels": len(set(v.get('metadata', {}).get('author_name', 'Unknown') for v in videos_data)),
+                "topics_covered": len(set(topic for v in videos_data for topic in str(v.get('analysis', {}).get('topics', '')).split() if topic))
+            }
+        }
+        
+        return comparison_results
+        
+    except Exception as e:
+        raise ValueError(f"Failed to compare videos: {str(e)}")
+
+def analyze_video_trends(videos_data, time_period, aspects, grouping):
+    """Analyze trends across multiple videos over time"""
+    try:
+        # Prepare trend analysis data
+        trend_template = f"""
+        You are an expert trend analyst. Analyze trends across these {len(videos_data)} YouTube videos based on:
+        - Time Period: {time_period}
+        - Aspects: {', '.join(aspects)}
+        - Grouping Method: {grouping}
+        
+        Videos for Trend Analysis:
+        """
+        
+        # Group videos by specified criteria
+        grouped_videos = group_videos_for_analysis(videos_data, grouping)
+        
+        for group_name, group_videos in grouped_videos.items():
+            trend_template += f"""
+            
+            **{group_name}** ({len(group_videos)} videos):
+            """
+            
+            for video in group_videos:
+                metadata = video.get('metadata', {})
+                analysis = video.get('analysis', {})
+                
+                trend_template += f"""
+                - {metadata.get('title', 'Unknown')[:100]}...
+                  Topics: {str(analysis.get('topics', ''))[:150]}...
+                  Sentiment: {str(analysis.get('sentiment', ''))[:100]}...
+                """
+        
+        trend_template += f"""
+        
+        **Trend Analysis Instructions:**
+        
+        1. **Topic Evolution**: How have the main topics evolved over the analyzed period/grouping?
+        
+        2. **Sentiment Trends**: What sentiment patterns emerge across the videos?
+        
+        3. **Content Depth Trends**: How has the depth and complexity of content changed?
+        
+        4. **Engagement Patterns**: What patterns can you identify in how content is presented?
+        
+        5. **Emerging Themes**: What new themes or topics are emerging?
+        
+        6. **Declining Themes**: What topics are becoming less prominent?
+        
+        7. **Consistency Patterns**: What remains consistent across the videos?
+        
+        8. **Innovation Trends**: How are creators innovating in their approach?
+        
+        9. **Audience Adaptation**: How is content adapting to audience preferences?
+        
+        10. **Future Predictions**: Based on these trends, what might we expect to see next?
+        
+        **Format your response with clear sections:**
+        - **Trend Overview**
+        - **Topic Evolution Analysis**
+        - **Sentiment Trend Patterns**
+        - **Content Quality Trends**
+        - **Engagement & Presentation Trends**
+        - **Emerging vs Declining Themes**
+        - **Consistency & Innovation Balance**
+        - **Audience & Market Adaptation**
+        - **Future Trend Predictions**
+        - **Key Insights & Recommendations**
+        """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(trend_template)
+        
+        if not response.text:
+            raise ValueError("No trend analysis response generated.")
+        
+        # Structure the trend results
+        trends = {
+            "trend_analysis": response.text,
+            "analysis_period": time_period,
+            "aspects_analyzed": aspects,
+            "grouping_method": grouping,
+            "data_summary": {
+                "total_videos": len(videos_data),
+                "groups_analyzed": len(grouped_videos),
+                "channels_involved": len(set(v.get('metadata', {}).get('author_name', 'Unknown') for v in videos_data)),
+                "analysis_date": datetime.now().isoformat()
+            },
+            "grouped_data": grouped_videos
+        }
+        
+        return trends
+        
+    except Exception as e:
+        raise ValueError(f"Failed to analyze video trends: {str(e)}")
+
+def group_videos_for_analysis(videos_data, grouping_method):
+    """Group videos based on the specified method"""
+    try:
+        grouped = {}
+        
+        if grouping_method == "temporal":
+            # Group by time periods (simplified - by month for now)
+            for video in videos_data:
+                # For now, group all videos together since we don't have upload dates
+                # In a real implementation, you'd parse upload dates from metadata
+                group_key = "All Videos (Temporal grouping requires upload dates)"
+                if group_key not in grouped:
+                    grouped[group_key] = []
+                grouped[group_key].append(video)
+                
+        elif grouping_method == "topical":
+            # Group by similar topics
+            for video in videos_data:
+                topics = str(video.get('analysis', {}).get('topics', ''))
+                # Simple topic grouping - you could implement more sophisticated clustering
+                if 'technology' in topics.lower() or 'tech' in topics.lower():
+                    group_key = "Technology"
+                elif 'education' in topics.lower() or 'learning' in topics.lower():
+                    group_key = "Education"
+                elif 'business' in topics.lower() or 'marketing' in topics.lower():
+                    group_key = "Business"
+                else:
+                    group_key = "General Content"
+                    
+                if group_key not in grouped:
+                    grouped[group_key] = []
+                grouped[group_key].append(video)
+                
+        elif grouping_method == "channel":
+            # Group by channel/creator
+            for video in videos_data:
+                channel = video.get('metadata', {}).get('author_name', 'Unknown Channel')
+                if channel not in grouped:
+                    grouped[channel] = []
+                grouped[channel].append(video)
+                
+        else:
+            # Default: group all together
+            grouped["All Videos"] = videos_data
+            
+        return grouped
+        
+    except Exception as e:
+        return {"All Videos": videos_data}
+
+def generate_trend_insights(trends_data, videos_data):
+    """Generate actionable insights from trend analysis"""
+    try:
+        insights_template = f"""
+        Based on the trend analysis of {len(videos_data)} videos, generate 5-10 key actionable insights that would be valuable for:
+        - Content creators
+        - Marketers
+        - Researchers
+        - Business strategists
+        
+        Trend Analysis Data:
+        {str(trends_data.get('trend_analysis', ''))[:1000]}...
+        
+        Generate insights that are:
+        1. Specific and actionable
+        2. Based on observable patterns
+        3. Useful for decision-making
+        4. Forward-looking when possible
+        
+        Format as a numbered list with brief explanations.
+        """
+        
+        genai.configure(api_key=google_api_key)
+        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+        response = model.generate_content(insights_template)
+        
+        if not response.text:
+            return ["Unable to generate insights at this time."]
+        
+        # Parse insights into a list
+        insights_text = response.text
+        insights = []
+        for line in insights_text.split("\n"):
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("•") or line.startswith("-")):
+                # Remove numbering and clean up
+                insight = re.sub(r"^\d+\.?\s*", "", line)
+                insight = re.sub(r"^[•\-]\s*", "", insight)
+                if insight:
+                    insights.append(insight.strip())
+        
+        return insights[:10]  # Limit to 10 insights
+        
+    except Exception as e:
+        return [f"Error generating insights: {str(e)}"]

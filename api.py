@@ -25,10 +25,40 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="🎥 YouTube Assistant API",
-    description="Advanced AI-powered YouTube video analysis and chat API",
+    description="""
+    **Advanced AI-powered YouTube video analysis and chat API**
+    
+    Developed by **Anjana Urulugastenna** - Quantitative Analyst & AI Engineer
+    
+    🌐 **Website:** [anjanau.com](https://anjanau.com/)
+    
+    ## Features
+    - **Single Video Analysis:** AI-powered summarization, sentiment analysis, and topic extraction
+    - **Comparative Analysis:** Compare 2-10 videos to identify similarities and differences  
+    - **Trend Analysis:** Analyze patterns across 3-50 videos over time
+    - **Interactive Chat:** RAG-powered Q&A with video content
+    - **Background Processing:** Async analysis with real-time status monitoring
+    
+    ## Technologies
+    - **AI Model:** Google Gemini 1.5 Flash
+    - **Vector Database:** FAISS with Sentence Transformers
+    - **Framework:** FastAPI with Pydantic validation
+    - **Architecture:** RAG (Retrieval-Augmented Generation)
+    
+    ---
+    © 2025 Anjana Urulugastenna. All rights reserved.
+    """,
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    contact={
+        "name": "Anjana Urulugastenna",
+        "url": "https://anjanau.com/",
+    },
+    license_info={
+        "name": "All Rights Reserved",
+        "url": "https://anjanau.com/",
+    },
 )
 
 # Add CORS middleware for web frontend
@@ -44,6 +74,8 @@ app.add_middleware(
 video_cache = {}
 analysis_cache = {}
 chat_sessions = {}
+comparison_cache = {}
+trend_analysis_cache = {}
 
 # Pydantic Models
 class VideoRequest(BaseModel):
@@ -78,6 +110,30 @@ class ChatResponse(BaseModel):
     sources: List[str]
     processing_time: float
 
+class CompareVideosRequest(BaseModel):
+    video_urls: List[HttpUrl]
+    comparison_aspects: List[str] = ["topics", "sentiment", "key_points", "conclusions"]
+    analysis_depth: str = "comprehensive"
+
+class CompareVideosResponse(BaseModel):
+    comparison_id: str
+    videos: List[Dict[str, Any]]
+    comparison_results: Dict[str, Any]
+    processing_time: float
+
+class TrendAnalysisRequest(BaseModel):
+    video_urls: List[HttpUrl]
+    time_period: Optional[str] = "all"  # "week", "month", "quarter", "year", "all"
+    trend_aspects: List[str] = ["topics", "sentiment", "engagement_patterns"]
+    grouping: str = "temporal"  # "temporal", "topical", "channel"
+
+class TrendAnalysisResponse(BaseModel):
+    analysis_id: str
+    videos_analyzed: int
+    trends: Dict[str, Any]
+    insights: List[str]
+    processing_time: float
+
 # Utility Functions
 def generate_video_id(url: str) -> str:
     """Generate unique ID for video URL"""
@@ -91,11 +147,33 @@ def get_cache_key(video_id: str, analysis_type: str) -> str:
 
 @app.get("/")
 async def root():
-    """API Health Check"""
+    """API Health Check and Information"""
     return {
         "message": "🎥 YouTube Assistant API",
+        "description": "AI-powered YouTube video analysis platform",
         "version": "2.0.0",
         "status": "healthy",
+        "developer": {
+            "name": "Anjana Urulugastenna",
+            "title": "Quantitative Analyst & AI Engineer", 
+            "website": "https://anjanau.com/"
+        },
+        "features": [
+            "Single Video Analysis",
+            "Comparative Analysis", 
+            "Trend Analysis",
+            "Interactive Chat with RAG",
+            "Background Processing"
+        ],
+        "endpoints": {
+            "docs": "/docs",
+            "health": "/health",
+            "analyze": "/api/v1/analyze",
+            "compare": "/api/v1/compare",
+            "trends": "/api/v1/trends",
+            "chat": "/api/v1/chat"
+        },
+        "copyright": "© 2025 Anjana Urulugastenna. All rights reserved.",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -218,6 +296,162 @@ async def process_video_analysis(
         if video_id in video_cache:
             video_cache[video_id]["status"] = "error"
             video_cache[video_id]["error"] = str(e)
+
+async def process_video_comparison(comparison_id: str, video_urls: List[str], aspects: List[str], depth: str):
+    """Background task for comparing multiple videos"""
+    try:
+        logger.info(f"Starting video comparison {comparison_id}")
+        
+        videos_data = []
+        
+        # Process each video
+        for i, url in enumerate(video_urls):
+            try:
+                video_id = generate_video_id(str(url))
+                
+                # Check if video is already processed
+                if video_id not in video_cache or video_cache[video_id].get("status") != "completed":
+                    # Process video if not already done
+                    docs, metadata = helper.loadYouTubeVideo(str(url))
+                    embeddings = helper.embedingFunction()
+                    db = helper.create_vector_store(docs, embeddings)
+                    
+                    # Store in cache
+                    video_cache[video_id] = {
+                        "docs": docs,
+                        "metadata": metadata,
+                        "db": db,
+                        "embeddings": embeddings,
+                        "processed_at": datetime.now(),
+                        "status": "completed"
+                    }
+                    
+                    # Generate basic analysis
+                    summary = helper.sumarizeWithGemini(docs, "comprehensive")
+                    topics = helper.extract_key_topics(docs)
+                    sentiment = helper.analyze_video_sentiment(docs)
+                    
+                    analysis_cache[f"{video_id}_comprehensive"] = {
+                        "data": {
+                            "summary": summary,
+                            "topics": topics,
+                            "sentiment": sentiment
+                        },
+                        "created_at": datetime.now()
+                    }
+                
+                # Collect video data for comparison
+                video_info = {
+                    "video_id": video_id,
+                    "url": str(url),
+                    "metadata": video_cache[video_id]["metadata"],
+                    "analysis": analysis_cache.get(f"{video_id}_comprehensive", {}).get("data", {})
+                }
+                videos_data.append(video_info)
+                
+                # Update progress
+                comparison_cache[comparison_id]["videos"] = videos_data
+                
+            except Exception as e:
+                logger.error(f"Error processing video {url}: {str(e)}")
+                continue
+        
+        # Perform comparison analysis
+        comparison_results = helper.compare_videos_analysis(videos_data, aspects, depth)
+        
+        # Update cache with results
+        comparison_cache[comparison_id].update({
+            "status": "completed",
+            "videos": videos_data,
+            "comparison_results": comparison_results,
+            "completed_at": datetime.now()
+        })
+        
+        logger.info(f"Completed video comparison {comparison_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in video comparison: {str(e)}")
+        comparison_cache[comparison_id]["status"] = "error"
+        comparison_cache[comparison_id]["error"] = str(e)
+
+async def process_trend_analysis(analysis_id: str, video_urls: List[str], time_period: str, aspects: List[str], grouping: str):
+    """Background task for trend analysis across videos"""
+    try:
+        logger.info(f"Starting trend analysis {analysis_id}")
+        
+        videos_data = []
+        
+        # Process each video
+        for i, url in enumerate(video_urls):
+            try:
+                video_id = generate_video_id(str(url))
+                
+                # Check if video is already processed
+                if video_id not in video_cache or video_cache[video_id].get("status") != "completed":
+                    # Process video if not already done
+                    docs, metadata = helper.loadYouTubeVideo(str(url))
+                    embeddings = helper.embedingFunction()
+                    db = helper.create_vector_store(docs, embeddings)
+                    
+                    # Store in cache
+                    video_cache[video_id] = {
+                        "docs": docs,
+                        "metadata": metadata,
+                        "db": db,
+                        "embeddings": embeddings,
+                        "processed_at": datetime.now(),
+                        "status": "completed"
+                    }
+                    
+                    # Generate analysis
+                    summary = helper.sumarizeWithGemini(docs, "comprehensive")
+                    topics = helper.extract_key_topics(docs)
+                    sentiment = helper.analyze_video_sentiment(docs)
+                    
+                    analysis_cache[f"{video_id}_comprehensive"] = {
+                        "data": {
+                            "summary": summary,
+                            "topics": topics,
+                            "sentiment": sentiment
+                        },
+                        "created_at": datetime.now()
+                    }
+                
+                # Collect video data for trend analysis
+                video_info = {
+                    "video_id": video_id,
+                    "url": str(url),
+                    "metadata": video_cache[video_id]["metadata"],
+                    "analysis": analysis_cache.get(f"{video_id}_comprehensive", {}).get("data", {})
+                }
+                videos_data.append(video_info)
+                
+                # Update progress
+                trend_analysis_cache[analysis_id]["videos_analyzed"] = len(videos_data)
+                
+            except Exception as e:
+                logger.error(f"Error processing video {url}: {str(e)}")
+                continue
+        
+        # Perform trend analysis
+        trends = helper.analyze_video_trends(videos_data, time_period, aspects, grouping)
+        insights = helper.generate_trend_insights(trends, videos_data)
+        
+        # Update cache with results
+        trend_analysis_cache[analysis_id].update({
+            "status": "completed",
+            "videos_analyzed": len(videos_data),
+            "trends": trends,
+            "insights": insights,
+            "completed_at": datetime.now()
+        })
+        
+        logger.info(f"Completed trend analysis {analysis_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in trend analysis: {str(e)}")
+        trend_analysis_cache[analysis_id]["status"] = "error"
+        trend_analysis_cache[analysis_id]["error"] = str(e)
 
 @app.get("/api/v1/status/{video_id}")
 async def get_analysis_status(video_id: str):
@@ -360,8 +594,124 @@ async def clear_all_cache():
     video_cache.clear()
     analysis_cache.clear()
     chat_sessions.clear()
+    comparison_cache.clear()
+    trend_analysis_cache.clear()
     
     return {"message": "All cache cleared"}
+
+@app.post("/api/v1/compare", response_model=CompareVideosResponse)
+async def compare_videos(request: CompareVideosRequest, background_tasks: BackgroundTasks):
+    """Compare multiple videos on similar topics"""
+    start_time = datetime.now()
+    
+    if len(request.video_urls) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 videos required for comparison")
+    
+    if len(request.video_urls) > 10:
+        raise HTTPException(status_code=400, detail="Maximum 10 videos allowed for comparison")
+    
+    # Generate comparison ID
+    comparison_id = hashlib.md5(str(request.video_urls).encode()).hexdigest()[:12]
+    
+    # Initialize comparison cache
+    comparison_cache[comparison_id] = {
+        "status": "processing",
+        "videos": [],
+        "comparison_results": {},
+        "created_at": datetime.now()
+    }
+    
+    # Start background processing
+    background_tasks.add_task(
+        process_video_comparison,
+        comparison_id,
+        request.video_urls,
+        request.comparison_aspects,
+        request.analysis_depth
+    )
+    
+    processing_time = (datetime.now() - start_time).total_seconds()
+    
+    return CompareVideosResponse(
+        comparison_id=comparison_id,
+        videos=[],
+        comparison_results={"status": "processing"},
+        processing_time=processing_time
+    )
+
+@app.get("/api/v1/compare/{comparison_id}")
+async def get_comparison_results(comparison_id: str):
+    """Get comparison results"""
+    if comparison_id not in comparison_cache:
+        raise HTTPException(status_code=404, detail="Comparison not found")
+    
+    comparison_data = comparison_cache[comparison_id]
+    return {
+        "comparison_id": comparison_id,
+        "status": comparison_data.get("status", "unknown"),
+        "videos": comparison_data.get("videos", []),
+        "comparison_results": comparison_data.get("comparison_results", {}),
+        "created_at": comparison_data.get("created_at")
+    }
+
+@app.post("/api/v1/trends", response_model=TrendAnalysisResponse)
+async def analyze_trends(request: TrendAnalysisRequest, background_tasks: BackgroundTasks):
+    """Analyze trends across multiple videos over time"""
+    start_time = datetime.now()
+    
+    if len(request.video_urls) < 3:
+        raise HTTPException(status_code=400, detail="At least 3 videos required for trend analysis")
+    
+    if len(request.video_urls) > 50:
+        raise HTTPException(status_code=400, detail="Maximum 50 videos allowed for trend analysis")
+    
+    # Generate analysis ID
+    analysis_id = hashlib.md5(str(request.video_urls).encode()).hexdigest()[:12]
+    
+    # Initialize trend analysis cache
+    trend_analysis_cache[analysis_id] = {
+        "status": "processing",
+        "videos_analyzed": 0,
+        "trends": {},
+        "insights": [],
+        "created_at": datetime.now()
+    }
+    
+    # Start background processing
+    background_tasks.add_task(
+        process_trend_analysis,
+        analysis_id,
+        request.video_urls,
+        request.time_period,
+        request.trend_aspects,
+        request.grouping
+    )
+    
+    processing_time = (datetime.now() - start_time).total_seconds()
+    
+    return TrendAnalysisResponse(
+        analysis_id=analysis_id,
+        videos_analyzed=0,
+        trends={"status": "processing"},
+        insights=[],
+        processing_time=processing_time
+    )
+
+@app.get("/api/v1/trends/{analysis_id}")
+async def get_trend_results(analysis_id: str):
+    """Get trend analysis results"""
+    if analysis_id not in trend_analysis_cache:
+        raise HTTPException(status_code=404, detail="Trend analysis not found")
+    
+    trend_data = trend_analysis_cache[analysis_id]
+    return {
+        "analysis_id": analysis_id,
+        "status": trend_data.get("status", "unknown"),
+        "videos_analyzed": trend_data.get("videos_analyzed", 0),
+        "trends": trend_data.get("trends", {}),
+        "insights": trend_data.get("insights", []),
+        "created_at": trend_data.get("created_at")
+    }
 
 # Startup and Shutdown Events
 @app.on_event("startup")

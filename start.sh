@@ -103,12 +103,17 @@ case "${1:-both}" in
         echo -e "${BLUE}🧪 Running API tests...${NC}"
         python test_api.py
         ;;
+    "test-new")
+        echo -e "${BLUE}🧪 Testing new Comparative & Trend Analysis features...${NC}"
+        python test_new_features.py
+        ;;
     *)
-        echo "Usage: $0 [backend|frontend|both|test]"
-        echo "  backend  - Start only FastAPI backend"
-        echo "  frontend - Start only Streamlit frontend"  
-        echo "  both     - Start both services (default)"
-        echo "  test     - Run API tests"
+        echo "Usage: $0 [backend|frontend|both|test|test-new]"
+        echo "  backend   - Start only FastAPI backend"
+        echo "  frontend  - Start only Streamlit frontend"  
+        echo "  both      - Start both services (default)"
+        echo "  test      - Run API tests"
+        echo "  test-new  - Test new Comparative & Trend Analysis features"
         exit 1
         ;;
 esac
