@@ -9,11 +9,197 @@ import google.generativeai as genai
 import re
 import requests
 import json
+import time
+import logging
 from datetime import datetime
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
+# Configure logging for rate limit tracking
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 google_api_key = os.getenv('GOOGLE_API_KEY')
+
+# Centralized Gemini Model Configuration
+class GeminiModelConfig:
+    """
+    Centralized configuration for Gemini models.
+    Change the PRIMARY_MODEL to switch between different Gemini models.
+    """
+    
+    # Available Gemini models
+    MODELS = {
+        "gemini-2.0-flash-lite": {
+            "name": "gemini-2.0-flash-lite",
+            "display_name": "Gemini 2.0 Flash-Lite",
+            "description": "Latest lightweight model with improved efficiency",
+            "max_retries": 3,
+            "initial_delay": 1
+        },
+        "gemini-2.0-flash": {
+            "name": "gemini-2.0-flash",
+            "display_name": "Gemini 2.0 Flash", 
+            "description": "Latest full-featured model with enhanced capabilities",
+            "max_retries": 3,
+            "initial_delay": 1
+        },
+        "gemini-1.5-flash": {
+            "name": "gemini-1.5-flash",
+            "display_name": "Gemini 1.5 Flash",
+            "description": "Stable and reliable model",
+            "max_retries": 2,
+            "initial_delay": 2
+        },
+        "gemini-2.5-flash-lite": {
+            "name": "gemini-2.5-flash-lite", 
+            "display_name": "Gemini 2.5 Flash-Lite",
+            "description": "Future model (when available)",
+            "max_retries": 3,
+            "initial_delay": 1
+        },
+        "gemini-2.5-flash": {
+            "name": "gemini-2.5-flash",
+            "display_name": "Gemini 2.5 Flash",
+            "description": "Future model (when available)", 
+            "max_retries": 3,
+            "initial_delay": 1
+        }
+    }
+    
+    # Primary model to use (change this to switch models globally)
+    PRIMARY_MODEL = "gemini-2.0-flash-lite"
+    
+    # Fallback models to try if primary fails
+    FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-2.0-flash"]
+    
+    @classmethod
+    def get_primary_model(cls):
+        """Get the primary model configuration"""
+        return cls.MODELS.get(cls.PRIMARY_MODEL, cls.MODELS["gemini-1.5-flash"])
+    
+    @classmethod
+    def get_fallback_models(cls):
+        """Get fallback model configurations"""
+        return [cls.MODELS.get(model, cls.MODELS["gemini-1.5-flash"]) for model in cls.FALLBACK_MODELS]
+    
+    @classmethod
+    def get_all_models(cls):
+        """Get all available models"""
+        return cls.MODELS
+    
+    @classmethod
+    def set_primary_model(cls, model_name):
+        """Set a new primary model"""
+        if model_name in cls.MODELS:
+            cls.PRIMARY_MODEL = model_name
+            logger.info(f"Primary model changed to: {cls.MODELS[model_name]['display_name']}")
+            return True
+        else:
+            logger.error(f"Model {model_name} not found in available models")
+            return False
+
+def handle_gemini_api_call(template, max_retries=None, initial_delay=None, use_fallback=True):
+    """
+    Handle Gemini API calls with rate limit retry logic, model fallback, and graceful error handling.
+    
+    Args:
+        template (str): The prompt template to send to Gemini
+        max_retries (int): Maximum number of retry attempts (uses model config if None)
+        initial_delay (int): Initial delay in seconds for exponential backoff (uses model config if None)
+        use_fallback (bool): Whether to try fallback models if primary fails
+    
+    Returns:
+        str: Response text from Gemini API
+    
+    Raises:
+        ValueError: If API call fails after all retries and fallbacks
+    """
+    import time
+    
+    # Get primary model configuration
+    primary_model = GeminiModelConfig.get_primary_model()
+    models_to_try = [primary_model]
+    
+    # Add fallback models if enabled
+    if use_fallback:
+        models_to_try.extend(GeminiModelConfig.get_fallback_models())
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_models = []
+    for model in models_to_try:
+        if model['name'] not in seen:
+            unique_models.append(model)
+            seen.add(model['name'])
+    
+    models_to_try = unique_models
+    
+    genai.configure(api_key=google_api_key)
+    
+    for model_config in models_to_try:
+        model_name = model_config['name']
+        model_display_name = model_config['display_name']
+        model_max_retries = max_retries or model_config['max_retries']
+        model_initial_delay = initial_delay or model_config['initial_delay']
+        
+        logger.info(f"Trying model: {model_display_name} ({model_name})")
+        
+        try:
+            model = genai.GenerativeModel(model_name=model_name)
+            
+            for attempt in range(model_max_retries + 1):
+                try:
+                    logger.info(f"Attempting API call with {model_display_name} (attempt {attempt + 1}/{model_max_retries + 1})")
+                    response = model.generate_content(template)
+                    
+                    if not response.text:
+                        raise ValueError("No response text found from Gemini API")
+                        
+                    logger.info(f"API call successful with {model_display_name}")
+                    return response.text
+                    
+                except Exception as e:
+                    error_str = str(e)
+                    
+                    # Check if it's a rate limit error (429 status)
+                    if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+                        if attempt < model_max_retries:
+                            # Extract retry delay from error if available
+                            retry_delay = model_initial_delay * (2 ** attempt)  # Exponential backoff
+                            
+                            # Try to extract suggested retry delay from error message
+                            import re
+                            delay_match = re.search(r'retry_delay.*?seconds: (\d+)', error_str)
+                            if delay_match:
+                                suggested_delay = int(delay_match.group(1))
+                                retry_delay = max(retry_delay, suggested_delay)
+                            
+                            logger.warning(f"Rate limit hit with {model_display_name}. Retrying in {retry_delay} seconds... (attempt {attempt + 1}/{model_max_retries + 1})")
+                            time.sleep(retry_delay)
+                            continue
+                        else:
+                            # Max retries exceeded for this model, try next model if available
+                            logger.warning(f"Rate limit exceeded for {model_display_name}, trying next model...")
+                            break
+                    else:
+                        # Non-rate-limit error - try next model immediately
+                        logger.warning(f"Non-rate-limit error with {model_display_name}: {error_str}")
+                        break
+                        
+        except Exception as e:
+            # Model initialization failed, try next model
+            logger.warning(f"Failed to initialize {model_display_name}: {str(e)}")
+            continue
+    
+    # If we get here, all models failed
+    logger.error("All models failed or rate limits exceeded")
+    raise ValueError(
+        f"API rate limit exceeded for all available models. You have reached your daily quota for the Gemini API. "
+        f"Tried models: {', '.join([m['display_name'] for m in models_to_try])}. "
+        f"Please try again tomorrow or upgrade your API plan. "
+        f"For more info: https://ai.google.dev/gemini-api/docs/rate-limits"
+    )
 
 def extract_video_id(url):
     """Extract video ID from YouTube URL."""
@@ -252,12 +438,16 @@ def sumarizeWithGemini(docs, summary_type="comprehensive"):
                         * Organize the summary logically and use clear, concise language.
                         """
                         
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
-        results = response.text
+        # Use the robust API call handler
+        try:
+            results = handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+        except ValueError as api_error:
+            # If API fails, return a helpful error message
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return f"⚠️ **Summary temporarily unavailable due to API rate limits.**\n\nThe Gemini API has reached its daily quota limit. This is common with the free tier which allows 50 requests per day.\n\n**Solutions:**\n• Wait until tomorrow for the quota to reset\n• Upgrade to a paid API plan for higher limits\n• The video transcript is still available for chat and analysis\n\n**Video content is cached** and ready for interactive chat once limits reset."
+            else:
+                return f"⚠️ **Summary generation failed:** {error_msg}\n\nThe video transcript is still available for chat and analysis."
         
         # Don't remove newlines for better formatting in bullet points and topics
         if summary_type in ["bullet_points", "key_topics"]:
@@ -266,7 +456,8 @@ def sumarizeWithGemini(docs, summary_type="comprehensive"):
             results = results.replace("\n", " ")
             return results
     except Exception as e:
-        raise ValueError(f"Failed to summarize the video: {str(e)}")
+        logger.error(f"Error in sumarizeWithGemini: {str(e)}")
+        return f"⚠️ **Summary generation failed:** {str(e)}\n\nThe video transcript is still available for chat and analysis."
 
 def getrelventDataFromDB(db, query):
     try:
@@ -378,16 +569,25 @@ def generate_suggested_questions(docs, num_questions=5):
                     Make each question clear, specific, and engaging.
                     """
         
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
+        try:
+            response_text = handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+        except ValueError as api_error:
+            # If API fails, return a fallback set of questions
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return [
+                    "What are the main topics discussed in this video?",
+                    "What are the key takeaways from this content?",
+                    "How does this information apply to real-world situations?",
+                    "What supporting evidence or examples are provided?",
+                    "What conclusions does the speaker reach?"
+                ]
+            else:
+                return ["What is this video about?", "What are the main points?", "What can I learn from this?"]
         
         # Parse questions into a list
-        questions_text = response.text
         questions = []
-        for line in questions_text.split("\n"):
+        for line in response_text.split("\n"):
             line = line.strip()
             if line and (line[0].isdigit() or line.startswith("•") or line.startswith("-")):
                 # Remove numbering and clean up
@@ -396,10 +596,19 @@ def generate_suggested_questions(docs, num_questions=5):
                 if question:
                     questions.append(question.strip())
         
-        return questions[:num_questions]  # Ensure we do not exceed requested number
+        return questions[:num_questions] if questions else [
+            "What are the main topics discussed in this video?",
+            "What are the key takeaways from this content?", 
+            "What supporting evidence is provided?"
+        ]
         
     except Exception as e:
-        raise ValueError(f"Failed to generate suggested questions: {str(e)}")
+        logger.error(f"Error in generate_suggested_questions: {str(e)}")
+        return [
+            "What are the main topics discussed in this video?",
+            "What are the key takeaways from this content?",
+            "What can I learn from this video?"
+        ]
 
 def extract_key_topics(docs, num_topics=5):
     """Extract key topics from the video content."""
@@ -423,16 +632,19 @@ def extract_key_topics(docs, num_topics=5):
                     Focus on the main themes, concepts, or subjects discussed in the video.
                     """
         
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
-        
-        return response.text
+        try:
+            return handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+        except ValueError as api_error:
+            # If API fails, return a helpful error message
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return "⚠️ **Topic extraction temporarily unavailable due to API rate limits.**\n\nPlease try again tomorrow or upgrade your API plan for higher limits."
+            else:
+                return f"⚠️ **Topic extraction failed:** {error_msg}"
         
     except Exception as e:
-        raise ValueError(f"Failed to extract key topics: {str(e)}")
+        logger.error(f"Error in extract_key_topics: {str(e)}")
+        return f"⚠️ **Topic extraction failed:** {str(e)}"
 
 def get_enhanced_search_results(db, query, k=12):
     """Get search results with relevance scores and better formatting."""

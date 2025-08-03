@@ -7,6 +7,7 @@ import streamlit as st
 import requests
 import time
 import os
+import socket
 from typing import Dict, Any, List
 from datetime import datetime
 
@@ -61,7 +62,7 @@ st.set_page_config(
     page_title="🎥 YouTube Assistant - AI Video Analysis Platform",
     page_icon="🎥", 
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     menu_items={
         'Get Help': 'https://anjanau.com/',
         'Report a bug': 'https://anjanau.com/',
@@ -157,9 +158,13 @@ st.markdown("""
     color: #e0e0e0;
 }
 
-/* Sidebar Styling */
-.css-1d391kg {
-    background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
+/* Sidebar Styling - HIDE SIDEBAR COMPLETELY */
+.css-1d391kg, [data-testid="stSidebar"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
 }
 
 /* Button Styling */
@@ -227,153 +232,289 @@ st.markdown("""
     background: linear-gradient(135deg, #4c72c4 0%, #5a67d8 100%);
 }
 
-/* Footer Cards Styling */
-.footer-card {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    border-radius: 15px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    border: 1px solid #3d4a6a;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    height: 100%;
+/* Modern Professional Footer Styling */
+.modern-footer {
+    background: linear-gradient(135deg, #0f1419 0%, #1a202c 50%, #2d3748 100%);
+    color: #e2e8f0;
+    margin-top: 3rem;
+    position: relative;
+    overflow: hidden;
 }
 
-.footer-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(76, 114, 196, 0.2);
+.modern-footer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #4c72c4 0%, #667eea 50%, #4c72c4 100%);
 }
 
-.card-header {
-    text-align: center;
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 3rem 2rem 1.5rem 2rem;
+}
+
+.footer-top {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #2d3748;
+}
+
+.footer-brand-section {
+    max-width: 400px;
+}
+
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     margin-bottom: 1rem;
+}
+
+.brand-title h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #4c72c4 0%, #667eea 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.brand-description {
+    color: #a0aec0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.brand-highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.highlight-tag {
+    background: rgba(76, 114, 196, 0.15);
+    color: #90cdf4;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid rgba(76, 114, 196, 0.3);
+}
+
+.footer-section {
+    min-width: 0;
+}
+
+.footer-section h3 {
+    color: #f7fafc;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    position: relative;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #4c72c4;
 }
 
-.card-header h4 {
+.footer-section h3::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, #4c72c4, #667eea);
+    border-radius: 1px;
+}
+
+.footer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-list li {
+    margin-bottom: 0.6rem;
+}
+
+.footer-list a {
+    color: #a0aec0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+
+.footer-list a:hover {
+    color: #90cdf4;
+    transform: translateX(4px);
+}
+
+.footer-list a::before {
+    content: '→';
+    position: absolute;
+    left: -20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
     color: #4c72c4;
-    margin: 0;
-    font-size: 1.2rem;
+}
+
+.footer-list a:hover::before {
+    opacity: 1;
+}
+
+.tech-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.4rem 0;
+    color: #a0aec0;
+    font-size: 0.85rem;
+}
+
+.tech-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(76, 114, 196, 0.2);
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+.developer-card {
+    background: linear-gradient(135deg, rgba(76, 114, 196, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+    padding: 1.2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(76, 114, 196, 0.2);
+    margin-bottom: 1rem;
+}
+
+.developer-name {
+    font-size: 1.1rem;
     font-weight: 600;
+    color: #f7fafc;
+    margin-bottom: 0.3rem;
 }
 
-.card-content {
-    color: #e0e0e0;
-    text-align: center;
-}
-
-.card-content p {
-    margin: 0.5rem 0;
+.developer-title {
+    color: #90cdf4;
     font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.card-content strong {
-    color: #f0f2f5;
-    font-weight: 600;
-}
-
-.card-features {
-    margin-top: 1rem;
-    text-align: left;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-    padding: 1rem;
-    border-radius: 10px;
-    border-left: 3px solid #4c72c4;
-    font-size: 0.85rem;
-    line-height: 1.6;
-    color: #bdc3c7;
-}
-
-.developer-info {
-    margin-top: 1rem;
-    text-align: left;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-    padding: 1rem;
-    border-radius: 10px;
-    border-left: 3px solid #27ae60;
-    font-size: 0.85rem;
-    line-height: 1.6;
-}
-
-.developer-info p {
-    margin: 0.3rem 0;
-    color: #bdc3c7;
-}
-
-.tech-stack {
-    margin-top: 1rem;
-    text-align: left;
-    background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-    padding: 1rem;
-    border-radius: 10px;
-    border-left: 3px solid #e74c3c;
-    font-size: 0.85rem;
-    line-height: 1.6;
-}
-
-.tech-stack p {
-    margin: 0.4rem 0;
-    color: #bdc3c7;
-}
-
-.tech-stack strong {
-    color: #f0f2f5;
-}
-
-.footer-link {
-    color: #74a7ff;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s ease;
-}
-
-.footer-link:hover {
-    color: #5a67d8;
-    text-decoration: none;
-}
-
-.copyright-card {
-    background: linear-gradient(135deg, #4c72c4 0%, #5a67d8 100%);
-    color: #f0f2f5;
-    text-align: center;
-    padding: 1rem 2rem;
-    border-radius: 25px;
-    margin: 2rem auto 1rem auto;
-    max-width: 600px;
-    box-shadow: 0 4px 20px rgba(76, 114, 196, 0.3);
-    border: 1px solid #3d4a6a;
-}
-
-.copyright-card p {
-    margin: 0;
-    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
     font-weight: 500;
 }
 
-/* Mobile responsive footer cards */
+.developer-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #4c72c4;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.developer-link:hover {
+    color: #667eea;
+    transform: translateY(-1px);
+}
+
+.footer-bottom {
+    padding: 1.5rem 0;
+    border-top: 1px solid #2d3748;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.copyright-text {
+    color: #718096;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.footer-social {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(76, 114, 196, 0.1);
+    color: #90cdf4;
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(76, 114, 196, 0.2);
+    transition: all 0.3s ease;
+}
+
+.social-btn:hover {
+    background: rgba(76, 114, 196, 0.2);
+    color: #f7fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 114, 196, 0.3);
+}
+
+/* Mobile responsive */
+@media (max-width: 1024px) {
+    .footer-top {
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    
+    .footer-brand-section {
+        max-width: 100%;
+    }
+}
+
 @media (max-width: 768px) {
-    .footer-card {
-        margin-bottom: 1.5rem;
-        padding: 1.2rem;
+    .footer-content {
+        padding: 2rem 1rem 1rem 1rem;
     }
     
-    .card-features,
-    .developer-info,
-    .tech-stack {
-        font-size: 0.8rem;
-        padding: 0.8rem;
+    .footer-top {
+        grid-template-columns: 1fr;
+        gap: 2rem;
     }
     
-    .copyright-card {
-        margin: 1.5rem auto;
-        padding: 0.8rem 1rem;
+    .footer-bottom {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
     }
     
-    .copyright-card p {
-        font-size: 0.8rem;
+    .footer-social {
+        justify-content: center;
     }
+    
+    .brand-highlights {
+        justify-content: center;
+    }
+}
+
+/* Hide old footer styles */
+.professional-footer,
+.footer-card,
+.copyright-card {
+    display: none !important;
 }
 
 /* Info Box Styling */
@@ -483,112 +624,6 @@ st.markdown("""
     color: #f0f2f5 !important;
 }
 
-/* Sidebar Selectbox specific styling - Enhanced for better visibility */
-[data-testid="stSidebar"] .stSelectbox > div > div > div {
-    background: #34495e !important;
-    border: 2px solid #3d4a6a !important;
-    position: relative !important;
-    z-index: 100 !important;
-}
-
-/* CRITICAL: Summary dropdown absolute positioning to prevent overlap */
-[data-testid="stSidebar"] .stSelectbox[data-testid="stSelectbox"] {
-    position: relative !important;
-    z-index: 1000 !important;
-    margin-bottom: 2rem !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox [role="listbox"] {
-    background: #34495e !important;
-    border: 2px solid #4c72c4 !important;
-    z-index: 999999 !important;
-    box-shadow: 0 12px 40px rgba(76, 114, 196, 0.8) !important;
-    position: absolute !important;
-    top: 100% !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100% !important;
-    min-width: 280px !important;
-    max-height: 250px !important;
-    overflow-y: auto !important;
-    border-radius: 8px !important;
-    margin-top: 4px !important;
-    transform: translateZ(0) !important;
-}
-
-/* Force dropdown to appear above all content */
-[data-testid="stSidebar"] .stSelectbox:focus-within [role="listbox"],
-[data-testid="stSidebar"] .stSelectbox:hover [role="listbox"] {
-    z-index: 999999 !important;
-    position: absolute !important;
-    display: block !important;
-}
-
-/* Ensure dropdown options are fully visible */
-[data-testid="stSidebar"] .stSelectbox [role="option"] {
-    background: #34495e !important;
-    color: #e0e0e0 !important;
-    padding: 0.75rem 1rem !important;
-    border-bottom: 1px solid #3d4a6a !important;
-    cursor: pointer !important;
-    white-space: nowrap !important;
-    font-size: 0.9rem !important;
-    line-height: 1.2 !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox [role="option"]:hover {
-    background: #4c72c4 !important;
-    color: #f0f2f5 !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox [aria-selected="true"] {
-    background: #5a67d8 !important;
-    color: #f0f2f5 !important;
-}
-
-/* CRITICAL: Prevent dropdown overlap with Analysis Features */
-[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 2.5rem !important;
-    position: relative !important;
-    z-index: 1000 !important;
-    clear: both !important;
-}
-
-/* Analysis Features section spacing */
-[data-testid="stSidebar"] .stMarkdown {
-    margin: 1rem 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
-    clear: both !important;
-}
-
-/* Ensure checkboxes don't interfere with dropdown */
-[data-testid="stSidebar"] .stCheckbox {
-    margin: 0.5rem 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
-    clear: both !important;
-}
-
-/* Force clear spacing between sections */
-[data-testid="stSidebar"] .element-container {
-    margin-bottom: 0.5rem !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-/* Ensure sidebar sections have proper spacing and positioning */
-[data-testid="stSidebar"] .stMarkdown {
-    margin-bottom: 1rem !important;
-    position: relative !important;
-}
-
-[data-testid="stSidebar"] .stCheckbox {
-    margin: 0.5rem 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
-}
-
 /* Multiselect Styling */
 .stMultiSelect > div > div > div {
     background: #34495e;
@@ -605,59 +640,13 @@ st.markdown("""
 /* Main content area */
 [data-testid="stMain"] {
     background: transparent !important;
+    margin-left: 0 !important;
+    width: 100% !important;
 }
 
 /* Header area */
 [data-testid="stHeader"] {
     background: transparent !important;
-}
-
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
-    width: 300px !important;
-    overflow: visible !important;
-}
-
-[data-testid="stSidebar"] > div {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
-    padding: 1rem 0.5rem !important;
-    overflow: visible !important;
-}
-
-/* Ensure sidebar can display dropdowns properly */
-[data-testid="stSidebar"] .element-container {
-    overflow: visible !important;
-    position: relative !important;
-}
-
-/* Compact sidebar elements for better space utilization */
-[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 0.5rem !important;
-    position: relative !important;
-    overflow: visible !important;
-}
-
-[data-testid="stSidebar"] .stCheckbox {
-    margin: 0.2rem 0 !important;
-}
-
-[data-testid="stSidebar"] .stMetric {
-    background: rgba(76, 114, 196, 0.1) !important;
-    border: 1px solid #3d4a6a !important;
-    border-radius: 8px !important;
-    padding: 0.5rem !important;
-    margin: 0.3rem 0 !important;
-}
-
-[data-testid="stSidebar"] .stExpander {
-    margin: 0.5rem 0 !important;
-}
-
-[data-testid="stSidebar"] .stButton > button {
-    font-size: 0.85rem !important;
-    padding: 0.4rem 0.8rem !important;
-    margin: 0.2rem 0 !important;
 }
 
 /* All containers */
@@ -674,7 +663,7 @@ st.markdown("""
     z-index: 1 !important;
 }
 
-/* Main content area should not interfere with sidebar dropdowns */
+/* Main content area optimized for full width */
 .main .block-container {
     position: relative !important;
     z-index: 1 !important;
@@ -715,30 +704,6 @@ st.markdown("""
     color: #e0e0e0 !important;
 }
 
-/* Sidebar content organization and spacing */
-[data-testid="stSidebar"] .element-container {
-    margin-bottom: 1rem !important;
-}
-
-[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 1.5rem !important;
-    position: relative !important;
-    z-index: 100 !important;
-}
-
-[data-testid="stSidebar"] .stCheckbox {
-    margin: 0.5rem 0 !important;
-    position: relative !important;
-    z-index: 1 !important;
-    clear: both !important;
-}
-
-[data-testid="stSidebar"] .stMarkdown h3 {
-    margin-top: 2rem !important;
-    margin-bottom: 1rem !important;
-    clear: both !important;
-}
-
 /* Override any remaining white backgrounds */
 * {
     background-color: transparent !important;
@@ -746,37 +711,6 @@ st.markdown("""
 
 .main > div, .main .block-container, .reportview-container {
     background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
-}
-
-/* Comprehensive Sidebar Dark Theme Styling */
-.css-1d391kg, [data-testid="stSidebar"] {
-    background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
-}
-
-.css-1y4p8pa, [data-testid="stSidebar"] > div {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
-    color: #e0e0e0 !important;
-}
-
-/* Sidebar content styling */
-[data-testid="stSidebar"] .stSelectbox > div > div {
-    background: #34495e !important;
-    color: #e0e0e0 !important;
-    border: 2px solid #3d4a6a !important;
-}
-
-[data-testid="stSidebar"] .stCheckbox > label {
-    color: #e0e0e0 !important;
-}
-
-[data-testid="stSidebar"] .stMarkdown {
-    color: #e0e0e0 !important;
-}
-
-[data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, 
-[data-testid="stSidebar"] h4, [data-testid="stSidebar"] h5, [data-testid="stSidebar"] h6 {
-    color: #f0f2f5 !important;
-}
 }
 
 /* Responsive adjustments */
@@ -931,9 +865,14 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # API Configuration Section - Compact version with analysis settings
-    with st.sidebar:
-        # Compact API status indicator at top
+    # Move former sidebar content to main area - API Configuration Section
+    st.markdown("### ⚙️ Configuration & Settings")
+    
+    # Create columns for the configuration section
+    config_col1, config_col2, config_col3, config_col4 = st.columns([1, 1, 1, 1])
+    
+    with config_col1:
+        # API status indicator
         api_health = check_api_health()
         status_color = "#4c72c4" if api_health else "#e74c3c"
         status_text = "✅ Connected" if api_health else "❌ Disconnected"
@@ -941,64 +880,53 @@ def main():
         st.markdown(f"""
         <div style="background: {status_color}; color: white; padding: 0.5rem; 
                     border-radius: 8px; text-align: center; margin-bottom: 1rem; font-size: 0.9rem;">
-            <strong>{status_text}</strong> | API: {API_BASE_URL.split('://')[1] if '://' in API_BASE_URL else API_BASE_URL}
+            <strong>{status_text}</strong><br>API: {API_BASE_URL.split('://')[1] if '://' in API_BASE_URL else API_BASE_URL}
         </div>
         """, unsafe_allow_html=True)
-        
-        # Analysis Settings Header
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #4c72c4 0%, #5a67d8 100%); 
-                    color: #f0f2f5; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; text-align: center;
-                    border: 1px solid #3d4a6a; box-shadow: 0 4px 15px rgba(76, 114, 196, 0.3);">
-            <h3 style="margin: 0; color: #f0f2f5; font-size: 1.1rem;">🎯 Analysis Settings</h3>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Compact form layout
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            summary_type = st.selectbox(
-                "📝 Summary",
-                ["comprehensive", "executive", "bullet_points", "key_topics"],
-                help="Summary type",
-                key="summary_type"
-            )
-            # Add explicit spacing after Summary dropdown
-            st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
-        
-        with col2:
-            # Quick status indicator
-            try:
-                videos_response = requests.get(f"{API_BASE_URL}/api/v1/videos", timeout=1)
-                if videos_response.status_code == 200:
-                    videos_data = videos_response.json()
-                    st.metric("📊 Videos", videos_data['total'])
-                else:
-                    st.metric("📊 Videos", "N/A")
-            except:
-                st.metric("📊 Videos", "N/A")
-        
-        # Add clear spacing before Analysis Features
-        st.markdown("<div style='height: 2rem; clear: both;'></div>", unsafe_allow_html=True)
-        
-        # Compact analysis features in two columns
-        st.markdown("**📊 Analysis Features**")
-        col3, col4 = st.columns([1, 1])
-        
-        with col3:
-            include_sentiment = st.checkbox("😊 Sentiment", value=False, help="Emotional tone analysis", key="include_sentiment")
-            include_topics = st.checkbox("🎯 Topics", value=True, help="Key themes extraction", key="include_topics")
-        
-        with col4:
-            include_questions = st.checkbox("❓ Questions", value=True, help="Suggested questions", key="include_questions")
-            # Quick refresh button
-            if st.button("🔄", help="Refresh status"):
-                st.rerun()
-        
+    
+    with config_col2:
+        # Summary type selection
+        summary_type = st.selectbox(
+            "📝 Summary Type",
+            ["comprehensive", "executive", "bullet_points", "key_topics"],
+            help="Select the type of summary you want",
+            key="summary_type"
+        )
+    
+    with config_col3:
+        # Quick status indicator
+        try:
+            videos_response = requests.get(f"{API_BASE_URL}/api/v1/videos", timeout=1)
+            if videos_response.status_code == 200:
+                videos_data = videos_response.json()
+                st.metric("📊 Videos Analyzed", videos_data['total'])
+            else:
+                st.metric("📊 Videos Analyzed", "N/A")
+        except Exception:
+            st.metric("📊 Videos Analyzed", "N/A")
+    
+    with config_col4:
+        # Quick refresh button
+        if st.button("🔄 Refresh Status", help="Refresh API status and metrics"):
+            st.rerun()
+    
+    # Analysis features section
+    st.markdown("**📊 Analysis Features**")
+    feature_col1, feature_col2, feature_col3, feature_col4 = st.columns([1, 1, 1, 1])
+    
+    with feature_col1:
+        include_sentiment = st.checkbox("😊 Sentiment Analysis", value=False, help="Analyze emotional tone", key="include_sentiment")
+    
+    with feature_col2:
+        include_topics = st.checkbox("🎯 Topic Extraction", value=True, help="Extract key themes", key="include_topics")
+    
+    with feature_col3:
+        include_questions = st.checkbox("❓ Generate Questions", value=True, help="Generate suggested questions", key="include_questions")
+    
+    with feature_col4:
         # API Configuration in expandable section
         with st.expander("🔧 API Configuration", expanded=False):
-            st.markdown(f"**Current:** `{API_BASE_URL}`")
+            st.markdown(f"**Current API URL:** `{API_BASE_URL}`")
             
             custom_api_url = st.text_input(
                 "Custom API URL:",
@@ -1012,22 +940,77 @@ def main():
                     st.rerun()
             
             if st.button("🔍 Test Connection"):
-                with st.spinner("Testing..."):
+                with st.spinner("Testing connection..."):
                     health_status = check_api_health()
                     if health_status:
-                        st.success("✅ API responsive")
+                        st.success("✅ API is responsive")
                     else:
-                        st.error("❌ Cannot connect")
+                        st.error("❌ Cannot connect to API")
                         st.info("💡 For network access: `uvicorn api:app --host 0.0.0.0 --port 8001`")
         
-        # Compact branding
-        st.markdown("""
-        <div style="margin-top: 1rem; padding: 0.8rem; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
-                    border-radius: 8px; text-align: center; border: 1px solid #3d4a6a;">
-            <small style="color: #bdc3c7;">by <strong style="color: #f0f2f5;">Anjana U.</strong><br>
-            <a href="https://anjanau.com/" target="_blank" style="color: #74a7ff; text-decoration: none;">anjanau.com</a></small>
-        </div>
-        """, unsafe_allow_html=True)
+        # Gemini Model Management Section
+        with st.expander("🤖 Gemini Model Configuration", expanded=False):
+            try:
+                # Get current model info
+                model_response = requests.get(f"{API_BASE_URL}/api/v1/models", timeout=5)
+                if model_response.status_code == 200:
+                    model_info = model_response.json()
+                    
+                    # Display current model
+                    current_model = model_info["current_model"]
+                    st.markdown(f"**Current Model:** {current_model['display_name']}")
+                    st.caption(current_model["description"])
+                    
+                    # Model selection
+                    available_models = model_info["available_models"]
+                    model_options = {model["display_name"]: model["name"] for model in available_models}
+                    
+                    selected_display_name = st.selectbox(
+                        "Select Gemini Model:",
+                        options=list(model_options.keys()),
+                        index=list(model_options.values()).index(current_model["name"]),
+                        help="Choose which Gemini model to use for analysis"
+                    )
+                    
+                    selected_model_name = model_options[selected_display_name]
+                    
+                    # Show model details
+                    selected_model_info = next(m for m in available_models if m["name"] == selected_model_name)
+                    st.info(f"**{selected_model_info['display_name']}:** {selected_model_info['description']}")
+                    
+                    # Switch model button
+                    if selected_model_name != current_model["name"]:
+                        if st.button(f"🔄 Switch to {selected_display_name}", type="primary"):
+                            try:
+                                switch_response = requests.post(
+                                    f"{API_BASE_URL}/api/v1/models/switch",
+                                    json={"model_name": selected_model_name},
+                                    timeout=5
+                                )
+                                if switch_response.status_code == 200:
+                                    st.success(f"✅ Successfully switched to {selected_display_name}")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Failed to switch model: {switch_response.text}")
+                            except requests.exceptions.RequestException as e:
+                                st.error(f"❌ Error switching model: {str(e)}")
+                    
+                    # Display fallback models
+                    if model_info.get("fallback_models"):
+                        st.markdown("**Fallback Models:**")
+                        for fallback in model_info["fallback_models"]:
+                            st.caption(f"• {fallback['display_name']}")
+                    
+                else:
+                    st.warning("⚠️ Could not load model information")
+                    
+            except requests.exceptions.RequestException:
+                st.warning("⚠️ Model management requires API connection")
+    
+    
+    # Add separator
+    st.markdown("---")
     
     # Check API health with enhanced error handling
     api_status = check_api_health()
@@ -1044,7 +1027,7 @@ def main():
            uvicorn api:app --host 0.0.0.0 --port 8001
            ```
         
-        2. **Update the API URL in the sidebar** to use your server's IP address:
+        2. **Update the API URL in the configuration section** to use your server's IP address:
            - Example: `http://192.168.1.100:8001`
            - Replace `192.168.1.100` with your actual server IP
         
@@ -1060,6 +1043,45 @@ def main():
         st.warning("⚠️ Some features may not work without backend connection")
     else:
         st.success(f"✅ Connected to FastAPI backend at: `{API_BASE_URL}`")
+        
+        # Add rate limit information banner
+        with st.expander("ℹ️ About API Rate Limits & Model Information", expanded=False):
+            # Get current model info if available
+            try:
+                model_response = requests.get(f"{API_BASE_URL}/api/v1/models", timeout=2)
+                if model_response.status_code == 200:
+                    model_info = model_response.json()
+                    current_model = model_info["current_model"]
+                    st.success(f"**Current AI Model:** {current_model['display_name']}")
+                    st.caption(current_model["description"])
+                else:
+                    st.info("**Current AI Model:** Gemini 2.0 Flash-Lite (default)")
+            except:
+                st.info("**Current AI Model:** Gemini 2.0 Flash-Lite (default)")
+            
+            st.info("""
+            **Gemini API Usage Information:**
+            
+            This application uses Google's Gemini API for AI analysis. Features include:
+            
+            • **Multiple Model Support:** Gemini 2.0 Flash-Lite, 2.0 Flash, 1.5 Flash, and future models
+            • **Automatic Fallback:** If primary model hits limits, automatically tries fallback models
+            • **Rate Limit Handling:** Intelligent retry with exponential backoff
+            • **Graceful Degradation:** When limits are reached, core functionality remains available
+            
+            **If you hit rate limits:**
+            • Video transcripts remain available for chat
+            • Cached analysis results are preserved
+            • System automatically tries alternative models
+            • Full functionality returns when quota resets (usually 24 hours)
+            • Consider upgrading to paid plan for higher limits
+            
+            **Rate limit friendly tips:**
+            • Use cached results when available
+            • Switch to different models if needed
+            • Chat interface works with existing analyzed content
+            • Model switching available in configuration
+            """)
     
     # Initialize session state
     if 'video_id' not in st.session_state:
@@ -1095,80 +1117,82 @@ def main():
     with tab4:
         render_chat_tab()
     
-    # Separate Footer Cards
+    # Professional Footer - Pure Streamlit Components
     st.markdown("---")
-    st.markdown("### 📊 Platform Information")
     
-    # Create three columns for footer cards
-    col1, col2, col3 = st.columns(3)
+    # Footer content using pure Streamlit components
+    st.markdown("### 🎥 YouTube Assistant Platform")
+    
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     
     with col1:
-        st.markdown("""
-        <div class="footer-card">
-            <div class="card-header">
-                <h4>🎥 YouTube Assistant</h4>
-            </div>
-            <div class="card-content">
-                <p><strong>AI-Powered Video Analysis Platform</strong></p>
-                <p>Advanced analysis, comparison, and trend identification for YouTube videos using cutting-edge AI technology.</p>
-                <div class="card-features">
-                    • Single Video Analysis<br>
-                    • Multi-Video Comparison<br>
-                    • Trend Analysis<br>
-                    • AI Chat Interface
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("**About the Platform**")
+        st.write("Advanced AI-powered platform for YouTube video analysis, comparison, and insights. Transform how you understand video content with cutting-edge technology.")
+        
+        # Technology highlights
+        st.markdown("**Key Technologies:**")
+        tech_tags = ["🤖 AI Analysis", "⚖️ Video Comparison", "📈 Trend Detection", "🔗 RAG Technology"]
+        st.write(" • ".join(tech_tags))
+        
+        # Developer info
+        st.markdown("**Developer:**")
+        st.write("**Anjana Urulugastenna** - Quantitative Analyst & AI Engineer")
+        st.markdown("[🌐 Visit Portfolio](https://anjanau.com/)")
     
     with col2:
-        st.markdown("""
-        <div class="footer-card">
-            <div class="card-header">
-                <h4>👨‍💻 Developer</h4>
-            </div>
-            <div class="card-content">
-                <p><strong>Anjana Urulugastenna</strong></p>
-                <p>Quantitative Analyst & AI Engineer</p>
-                <div class="developer-info">
-                    <p>📧 Professional Contact</p>
-                    <p>🌐 <a href="https://anjanau.com/" target="_blank" class="footer-link">anjanau.com</a></p>
-                    <p>🔬 Specializing in AI/ML, Data Analysis, and Quantitative Research</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("**Platform Features**")
+        features = [
+            "🎬 Single Video Analysis",
+            "⚖️ Multi-Video Comparison", 
+            "📈 Trend Analysis",
+            "💬 AI Chat Interface",
+            "📊 Content Insights",
+            "📈 Analytics Dashboard"
+        ]
+        for feature in features:
+            st.write(f"• {feature}")
     
     with col3:
-        st.markdown("""
-        <div class="footer-card">
-            <div class="card-header">
-                <h4>⚙️ Technology Stack</h4>
-            </div>
-            <div class="card-content">
-                <p><strong>Powered by Advanced Technologies</strong></p>
-                <div class="tech-stack">
-                    <p>🔧 <strong>Backend:</strong> FastAPI + Python</p>
-                    <p>🎨 <strong>Frontend:</strong> Streamlit</p>
-                    <p>🤖 <strong>AI Engine:</strong> Google Gemini AI</p>
-                    <p>🔗 <strong>Framework:</strong> LangChain</p>
-                    <p>📊 <strong>Vector DB:</strong> FAISS</p>
-                    <p>🧠 <strong>Architecture:</strong> RAG (Retrieval-Augmented Generation)</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("**Technology Stack**")
+        stack = [
+            "🔧 **Backend:** FastAPI + Python",
+            "🎨 **Frontend:** Streamlit", 
+            "🤖 **AI:** Google Gemini",
+            "🔗 **Framework:** LangChain",
+            "📊 **Vector DB:** FAISS"
+        ]
+        for tech in stack:
+            st.write(tech)
     
-    # Copyright card at the bottom
-    st.markdown("""
-    <div class="copyright-card">
-        <p>© 2025 Anjana Urulugastenna • All Rights Reserved • Powered by AI Innovation</p>
-    </div>
-    """, unsafe_allow_html=True)
+    with col4:
+        st.markdown("**Resources**")
+        resources = [
+            "[Professional Portfolio](https://anjanau.com/)",
+            "[Other Projects](https://anjanau.com/projects)",
+            "[Research Work](https://anjanau.com/research)", 
+            "[Contact](https://anjanau.com/contact)"
+        ]
+        for resource in resources:
+            st.write(f"• {resource}")
+    
+    # Footer bottom
+    st.markdown("---")
+    
+    footer_col1, footer_col2 = st.columns([2, 1])
+    
+    with footer_col1:
+        st.caption("© 2025 Anjana Urulugastenna • YouTube Assistant Platform • All Rights Reserved")
+    
+    with footer_col2:
+        st.markdown("""
+        [🌐 Portfolio](https://anjanau.com/) | [📧 Contact](https://anjanau.com/contact)
+        """)
+    
+    st.markdown("")  # Add some spacing
 
 def render_single_video_tab():
     """Render the single video analysis tab"""
-    # Get analysis settings from session state (set by sidebar)
+    # Get analysis settings from session state (set in configuration section)
     summary_type = st.session_state.get('summary_type', 'comprehensive')
     include_sentiment = st.session_state.get('include_sentiment', False)
     include_topics = st.session_state.get('include_topics', True)
@@ -1178,12 +1202,8 @@ def render_single_video_tab():
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown("""
-        <div class="analysis-card">
-            <h2 style="color: #4c72c4; margin-top: 0;">🎬 Video Analysis</h2>
-            <p>Analyze any YouTube video with advanced AI-powered insights</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("🎬 Video Analysis")
+        st.write("Analyze any YouTube video with advanced AI-powered insights")
         
         # Video input with enhanced styling
         video_url = st.text_input(
@@ -1221,49 +1241,76 @@ def render_single_video_tab():
         
         # Enhanced status monitoring
         if st.session_state.video_id:
-            st.markdown("""
-            <div class="analysis-card">
-                <h3 style="color: #4c72c4; margin-top: 0;">📊 Analysis Status</h3>
-            </div>
-            """, unsafe_allow_html=True)
+            st.subheader("📊 Analysis Status")
             
             try:
                 status_data = get_analysis_status(st.session_state.video_id)
                 
                 if status_data["status"] == "completed":
-                    st.markdown('<div class="api-status status-healthy">✅ Analysis Complete</div>', unsafe_allow_html=True)
+                    st.success("✅ Analysis Complete")
                     
-                    # Get analysis results
+                    # Get analysis results with fallback logic
                     if st.button("📖 Load Results", help="Load comprehensive analysis results"):
+                        # Try different summary types to find existing results
+                        summary_types_to_try = [summary_type, "comprehensive", "executive", "bullet_points", "key_topics"]
+                        analysis_loaded = False
+                        
+                        for st_type in summary_types_to_try:
+                            try:
+                                analysis_data = get_analysis_results(st.session_state.video_id, st_type)
+                                st.session_state.analysis_data = analysis_data
+                                if st_type != summary_type:
+                                    st.info(f"✅ Results loaded with '{st_type}' summary type. You can re-analyze with '{summary_type}' if needed.")
+                                else:
+                                    st.success("✅ Results loaded successfully!")
+                                analysis_loaded = True
+                                break
+                            except requests.exceptions.HTTPError as e:
+                                if e.response.status_code == 404:
+                                    continue  # Try next summary type
+                                elif e.response.status_code == 202:
+                                    st.warning("⏳ Analysis still processing...")
+                                    analysis_loaded = True
+                                    break
+                                else:
+                                    st.error(f"❌ Error loading results: {e}")
+                                    analysis_loaded = True
+                                    break
+                        
+                        if not analysis_loaded:
+                            st.error("❌ No analysis results found. Please re-analyze the video.")
+                            
+                    # Option to re-analyze with different summary type
+                    if st.button("🔄 Re-analyze with Current Settings", help="Re-analyze video with current summary type"):
+                        video_url = f"https://www.youtube.com/watch?v={st.session_state.video_id}"
                         try:
-                            analysis_data = get_analysis_results(st.session_state.video_id, summary_type)
-                            st.session_state.analysis_data = analysis_data
-                            st.success("✅ Results loaded successfully!")
-                        except requests.exceptions.HTTPError as e:
-                            if e.response.status_code == 202:
-                                st.warning("⏳ Analysis still processing...")
-                            else:
-                                st.error(f"❌ Error loading results: {e}")
+                            with st.spinner("🎯 Re-analyzing video..."):
+                                result = analyze_video_api(
+                                    video_url, 
+                                    summary_type, 
+                                    include_sentiment, 
+                                    include_topics, 
+                                    include_questions
+                                )
+                                st.success("✅ Re-analysis started! Check status in a moment.")
+                        except Exception as e:
+                            st.error(f"❌ Error re-analyzing: {str(e)}")
                         
                 elif status_data["status"] == "processing":
-                    st.markdown('<div class="api-status status-processing">⏳ Processing...</div>', unsafe_allow_html=True)
+                    st.info("⏳ Processing...")
                     if st.button("🔄 Refresh Status", key="refresh_single"):
                         st.rerun()
                         
                 elif status_data["status"] == "error":
-                    st.markdown('<div class="api-status status-error">❌ Processing Error</div>', unsafe_allow_html=True)
+                    st.error("❌ Processing Error")
                     st.error(f"Error: {status_data.get('error', 'Unknown error')}")
                 
                 # Show metadata with professional styling
                 if status_data.get("metadata"):
                     metadata = status_data["metadata"]
-                    st.markdown(f"""
-                    <div class="metric-container">
-                        <h4 style="margin: 0; color: #4c72c4;">📺 Video Information</h4>
-                        <p style="margin: 0.5rem 0 0 0;"><strong>Title:</strong> {metadata.get('title', 'Unknown')}</p>
-                        <p style="margin: 0.5rem 0 0 0;"><strong>Channel:</strong> {metadata.get('author_name', 'Unknown')}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.subheader("📺 Video Information")
+                    st.write(f"**Title:** {metadata.get('title', 'Unknown')}")
+                    st.write(f"**Channel:** {metadata.get('author_name', 'Unknown')}")
                     
             except requests.exceptions.HTTPError as e:
                 st.error(f"❌ Could not get status: {e}")
@@ -1274,20 +1321,12 @@ def render_single_video_tab():
 
 def render_comparison_tab():
     """Render the video comparison tab"""
-    st.markdown("""
-    <div class="analysis-card">
-        <h2 style="color: #4c72c4; margin-top: 0;">⚖️ Compare Multiple Videos</h2>
-        <p><em>Compare 2-10 videos on similar topics to identify differences, similarities, and unique insights powered by advanced AI analysis.</em></p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("⚖️ Compare Multiple Videos")
+    st.write("*Compare 2-10 videos on similar topics to identify differences, similarities, and unique insights powered by advanced AI analysis.*")
     
     # Video URLs input with professional styling
-    st.markdown("""
-    <div class="analysis-card">
-        <h3 style="color: #4c72c4; margin-top: 0;">📺 Videos to Compare</h3>
-        <p>Add YouTube URLs for videos you want to compare (minimum 2, maximum 10)</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("📺 Videos to Compare")
+    st.write("Add YouTube URLs for videos you want to compare (minimum 2, maximum 10)")
     
     # Initialize comparison URLs in session state
     if 'comparison_urls' not in st.session_state:
@@ -1320,12 +1359,8 @@ def render_comparison_tab():
             st.rerun()
     
     # Comparison settings with professional styling
-    st.markdown("""
-    <div class="analysis-card">
-        <h3 style="color: #4c72c4; margin-top: 0;">⚙️ Comparison Settings</h3>
-        <p>Configure how you want the videos to be compared</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("⚙️ Comparison Settings")
+    st.write("Configure how you want the videos to be compared")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -1362,55 +1397,35 @@ def render_comparison_tab():
     
     # Show comparison results with professional styling
     if hasattr(st.session_state, 'comparison_id'):
-        st.markdown("""
-        <div class="analysis-card">
-            <h3 style="color: #4c72c4; margin-top: 0;">📊 Comparison Progress</h3>
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("📊 Comparison Progress")
         
         try:
             comparison_data = get_comparison_results(st.session_state.comparison_id)
             
             if comparison_data["status"] == "completed":
-                st.markdown('<div class="api-status status-healthy">✅ Comparison completed!</div>', unsafe_allow_html=True)
+                st.success("✅ Comparison completed!")
                 st.session_state.comparison_data = comparison_data
                 
                 # Display results with enhanced styling
                 if comparison_data.get("comparison_results"):
-                    st.markdown("""
-                    <div class="analysis-card">
-                        <h3 style="color: #4c72c4; margin-top: 0;">🔍 Comparison Results</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.subheader("🔍 Comparison Results")
                     
                     # Videos analyzed
                     videos = comparison_data.get("videos", [])
-                    st.markdown(f"""
-                    <div class="metric-container">
-                        <h4 style="margin: 0; color: #4c72c4;">📺 Analysis Summary</h4>
-                        <p style="margin: 0.5rem 0 0 0;"><strong>Videos Analyzed:</strong> {len(videos)}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.subheader("📺 Analysis Summary")
+                    st.write(f"**Videos Analyzed:** {len(videos)}")
                     
                     with st.expander("📺 Videos Overview", expanded=True):
                         for i, video in enumerate(videos, 1):
                             metadata = video.get("metadata", {})
-                            st.markdown(f"""
-                            <div style="padding: 1rem; margin: 0.5rem 0; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 10px; border-left: 4px solid #4c72c4; color: #e0e0e0;">
-                                <strong>{i}. {metadata.get('title', 'Unknown Title')}</strong><br>
-                                <small style="color: #bdc3c7;">📺 Channel: {metadata.get('author_name', 'Unknown')}</small><br>
-                                <small style="color: #bdc3c7;">🔗 <a href="{video.get('url', '#')}" target="_blank" style="color: #74a7ff;">View Video</a></small>
-                            </div>
-                            """, unsafe_allow_html=True)
+                            st.write(f"**{i}. {metadata.get('title', 'Unknown Title')}**")
+                            st.write(f"📺 Channel: {metadata.get('author_name', 'Unknown')}")
+                            st.write(f"🔗 [View Video]({video.get('url', '#')})")
                     
                     # Comparison analysis
                     analysis = comparison_data["comparison_results"].get("comparison_analysis", "")
                     if analysis:
-                        st.markdown("""
-                        <div class="analysis-card">
-                            <h3 style="color: #4c72c4; margin-top: 0;">📋 Detailed Analysis</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.subheader("📋 Detailed Analysis")
                         st.markdown(analysis)
                     
                     # Summary stats
@@ -1428,13 +1443,13 @@ def render_comparison_tab():
                 progress = len(comparison_data.get("videos", []))
                 total = len([url for url in st.session_state.comparison_urls if url.strip()])
                 st.progress(progress / total if total > 0 else 0)
-                st.markdown(f'<div class="api-status status-processing">⏳ Processing... ({progress}/{total} videos analyzed)</div>', unsafe_allow_html=True)
+                st.info(f"⏳ Processing... ({progress}/{total} videos analyzed)")
                 
                 if st.button("🔄 Refresh Progress", key="refresh_comparison"):
                     st.rerun()
                     
             elif comparison_data["status"] == "error":
-                st.markdown(f'<div class="api-status status-error">❌ Comparison failed: {comparison_data.get("error", "Unknown error")}</div>', unsafe_allow_html=True)
+                st.error(f"❌ Comparison failed: {comparison_data.get('error', 'Unknown error')}")
                 
         except Exception as e:
             st.error(f"❌ Error getting comparison results: {str(e)}")
@@ -1578,38 +1593,21 @@ def render_trend_analysis_tab():
 
 def render_chat_tab():
     """Render the chat interface tab"""
-    st.markdown("""
-    <div class="analysis-card">
-        <h2 style="color: #4c72c4; margin-top: 0;">💬 Chat with Analyzed Videos</h2>
-        <p>Interactive Q&A with your analyzed video content using advanced RAG (Retrieval-Augmented Generation)</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("💬 Chat with Analyzed Videos")
+    st.write("Interactive Q&A with your analyzed video content using advanced RAG (Retrieval-Augmented Generation)")
     
     if not st.session_state.video_id:
-        st.markdown("""
-        <div class="analysis-card" style="text-align: center; border-left-color: #ffc107;">
-            <h3 style="color: #ffc107; margin-top: 0;">🎬 No Videos Analyzed Yet</h3>
-            <p>To start chatting, first analyze a video using one of these options:</p>
-            <div style="margin: 1.5rem 0;">
-                <p>📺 <strong>Single Video Analysis</strong> - Analyze individual videos</p>
-                <p>⚖️ <strong>Compare Videos</strong> - Compare multiple videos</p>
-                <p>📈 <strong>Trend Analysis</strong> - Analyze video trends</p>
-            </div>
-            <p><em>Once analysis is complete, return here to chat with the content!</em></p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.warning("🎬 No Videos Analyzed Yet")
+        st.info("To start chatting, first analyze a video using one of these options:")
+        st.write("📺 **Single Video Analysis** - Analyze individual videos")
+        st.write("⚖️ **Compare Videos** - Compare multiple videos") 
+        st.write("📈 **Trend Analysis** - Analyze video trends")
+        st.write("*Once analysis is complete, return here to chat with the content!*")
     else:
         # Chat settings
         col1, col2 = st.columns([3, 1])
         with col1:
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); 
-                        padding: 1rem; border-radius: 10px; margin-bottom: 1rem; 
-                        border: 1px solid #3d4a6a; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <h4 style="margin: 0; color: #4c72c4;">💡 Chat Tips</h4>
-                <p style="margin: 0.5rem 0 0 0; color: #bdc3c7;">Ask about video content, request summaries, or explore topics in depth</p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.info("💡 **Chat Tips:** Ask about video content, request summaries, or explore topics in depth")
         
         with col2:
             external_sources = st.checkbox("🌐 External Sources", value=False, 
@@ -1622,19 +1620,12 @@ def render_chat_tab():
         with chat_container:
             for i, chat in enumerate(st.session_state.chat_history):
                 # User message
-                st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                           color: #f8f9fa; padding: 1rem; border-radius: 15px; margin: 1rem 0;">
-                    <strong>🧑 You:</strong><br>{chat["user"]}
-                </div>
-                """, unsafe_allow_html=True)
+                with st.chat_message("user"):
+                    st.write(chat["user"])
                 
                 # Assistant message
-                st.markdown(f"""
-                <div class="chat-message">
-                    <strong>🤖 AI Assistant:</strong><br>{chat["assistant"]}
-                </div>
-                """, unsafe_allow_html=True)
+                with st.chat_message("assistant"):
+                    st.write(chat["assistant"])
         
         # Chat input
         user_message = st.chat_input("💬 Ask anything about the analyzed videos...")
@@ -1715,7 +1706,7 @@ def render_chat_tab():
                     )
 
 def render_analysis_results(analysis_data):
-    """Render analysis results in a consistent format"""
+    """Render analysis results in a consistent format with rate limit awareness"""
     st.subheader("📝 Analysis Results")
     
     # Tabs for different results
@@ -1723,30 +1714,56 @@ def render_analysis_results(analysis_data):
     
     with tab1:
         st.write("**Summary:**")
-        st.write(analysis_data.get("summary", "No summary available"))
+        summary_text = analysis_data.get("summary", "No summary available")
+        
+        # Check if summary contains rate limit message
+        if "⚠️" in summary_text and ("rate limit" in summary_text.lower() or "quota" in summary_text.lower()):
+            st.warning(summary_text)
+            st.info("💡 **Chat is still available!** You can ask questions about the video content using the Chat Interface tab.")
+        else:
+            st.write(summary_text)
     
     with tab2:
-        if analysis_data.get("topics"):
+        topics_text = analysis_data.get("topics")
+        if topics_text:
             st.write("**Key Topics:**")
-            st.write(analysis_data["topics"])
+            # Check if topics contains rate limit message
+            if "⚠️" in topics_text and ("rate limit" in topics_text.lower() or "quota" in topics_text.lower()):
+                st.warning(topics_text)
+            else:
+                st.write(topics_text)
         else:
             st.info("Topics not included in analysis")
     
     with tab3:
-        if analysis_data.get("questions"):
+        questions = analysis_data.get("questions")
+        if questions:
             st.write("**Suggested Questions:**")
-            for i, question in enumerate(analysis_data["questions"], 1):
-                if st.button(f"💬 {question}", key=f"q_{i}"):
-                    # Add question to chat
-                    st.session_state.pending_question = question
-                    st.rerun()
+            # Handle both list and string format for questions
+            if isinstance(questions, list):
+                for i, question in enumerate(questions, 1):
+                    if st.button(f"💬 {question}", key=f"q_{i}"):
+                        # Add question to chat
+                        st.session_state.pending_question = question
+                        st.rerun()
+            else:
+                # String format (could be rate limit message)
+                if "⚠️" in questions and ("rate limit" in questions.lower() or "quota" in questions.lower()):
+                    st.warning(questions)
+                else:
+                    st.write(questions)
         else:
             st.info("Questions not included in analysis")
     
     with tab4:
-        if analysis_data.get("sentiment"):
+        sentiment_text = analysis_data.get("sentiment")
+        if sentiment_text:
             st.write("**Sentiment Analysis:**")
-            st.write(analysis_data["sentiment"])
+            # Check if sentiment contains rate limit message  
+            if "⚠️" in sentiment_text and ("rate limit" in sentiment_text.lower() or "quota" in sentiment_text.lower()):
+                st.warning(sentiment_text)
+            else:
+                st.write(sentiment_text)
         else:
             st.info("Sentiment analysis not included")
 
