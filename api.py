@@ -40,10 +40,11 @@ app = FastAPI(
     - **Background Processing:** Async analysis with real-time status monitoring
     
     ## Technologies
-    - **AI Model:** Google Gemini 1.5 Flash
+    - **AI Model:** Google Gemini 2.0 Flash-Lite (configurable)
     - **Vector Database:** FAISS with Sentence Transformers
     - **Framework:** FastAPI with Pydantic validation
     - **Architecture:** RAG (Retrieval-Augmented Generation)
+    - **Model Management:** Dynamic model switching with fallback support
     
     ---
     © 2025 Anjana Urulugastenna. All rights reserved.
@@ -186,6 +187,72 @@ async def health_check():
         "active_sessions": len(chat_sessions),
         "timestamp": datetime.now().isoformat()
     }
+
+@app.get("/api/v1/models")
+async def get_model_info():
+    """Get current model configuration and available models"""
+    try:
+        primary_model = helper.GeminiModelConfig.get_primary_model()
+        all_models = helper.GeminiModelConfig.get_all_models()
+        fallback_models = helper.GeminiModelConfig.get_fallback_models()
+        
+        return {
+            "current_model": {
+                "name": primary_model["name"],
+                "display_name": primary_model["display_name"],
+                "description": primary_model["description"]
+            },
+            "fallback_models": [
+                {
+                    "name": model["name"],
+                    "display_name": model["display_name"],
+                    "description": model["description"]
+                } for model in fallback_models
+            ],
+            "available_models": [
+                {
+                    "name": model_name,
+                    "display_name": model_config["display_name"],
+                    "description": model_config["description"],
+                    "is_primary": model_name == helper.GeminiModelConfig.PRIMARY_MODEL
+                } for model_name, model_config in all_models.items()
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting model info: {str(e)}")
+
+@app.post("/api/v1/models/switch")
+async def switch_model(request: dict):
+    """Switch the primary Gemini model"""
+    try:
+        model_name = request.get("model_name")
+        if not model_name:
+            raise HTTPException(status_code=400, detail="model_name is required")
+        
+        success = helper.GeminiModelConfig.set_primary_model(model_name)
+        if success:
+            primary_model = helper.GeminiModelConfig.get_primary_model()
+            return {
+                "success": True,
+                "message": f"Successfully switched to {primary_model['display_name']}",
+                "new_model": {
+                    "name": primary_model["name"],
+                    "display_name": primary_model["display_name"],
+                    "description": primary_model["description"]
+                },
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            available_models = list(helper.GeminiModelConfig.get_all_models().keys())
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid model name. Available models: {', '.join(available_models)}"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error switching model: {str(e)}")
 
 @app.post("/api/v1/analyze", response_model=VideoResponse)
 async def analyze_video(request: VideoRequest, background_tasks: BackgroundTasks):
