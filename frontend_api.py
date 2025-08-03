@@ -582,53 +582,186 @@ st.markdown("""
     box-shadow: 0 0 0 2px rgba(76, 114, 196, 0.2);
 }
 
-/* Select Box Styling */
-.stSelectbox > div > div > div {
-    background: #34495e;
-    color: #e0e0e0;
-    border: 2px solid #3d4a6a;
+/* ========== COMPREHENSIVE SELECT BOX STYLING ========== */
+
+/* Main Select Box Container */
+.stSelectbox {
+    position: relative !important;
+    z-index: 1000 !important;
 }
 
-/* Select Box Dropdown Styling - Fix overlay issue */
-.stSelectbox > div > div > div > div {
+/* Select Box Input Field */
+.stSelectbox > div > div > div {
     background: #34495e !important;
     color: #e0e0e0 !important;
     border: 2px solid #3d4a6a !important;
-    z-index: 9999 !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+    border-radius: 10px !important;
 }
 
-/* Select Box Options */
-.stSelectbox [role="listbox"] {
+/* All possible dropdown containers */
+.stSelectbox div[data-baseweb="select"],
+.stSelectbox div[data-baseweb="popover"],
+.stSelectbox div[role="listbox"],
+.stSelectbox ul,
+.stSelectbox > div > div > div > div,
+.stSelectbox [class*="dropdown"],
+.stSelectbox [class*="menu"],
+.stSelectbox [class*="option"] {
     background: #34495e !important;
+    color: #e0e0e0 !important;
     border: 2px solid #3d4a6a !important;
+    border-radius: 10px !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.9) !important;
+}
+
+/* Specific targeting for dropdown options */
+.stSelectbox [role="option"],
+.stSelectbox li,
+.stSelectbox div[role="button"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    padding: 0.75rem 1rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+}
+
+/* Hover and selected states */
+.stSelectbox [role="option"]:hover,
+.stSelectbox li:hover,
+.stSelectbox div[role="button"]:hover {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+.stSelectbox [aria-selected="true"],
+.stSelectbox [data-selected="true"],
+.stSelectbox .selected {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+/* Force positioning and layering */
+.stSelectbox > div > div {
+    position: relative !important;
     z-index: 9999 !important;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5) !important;
+}
+
+/* Dropdown positioning */
+.stSelectbox div[data-baseweb="popover"] {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
+    margin-top: 2px !important;
     max-height: 200px !important;
     overflow-y: auto !important;
+    width: 100% !important;
 }
 
-.stSelectbox [role="option"] {
+/* Override any transparent backgrounds */
+.stSelectbox * {
+    background-color: inherit !important;
+}
+
+.stSelectbox div[role="listbox"] {
+    background: #34495e !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    z-index: 999999 !important;
+}
+
+/* ========== COMPREHENSIVE MULTISELECT STYLING ========== */
+
+/* Main Multiselect Container */
+.stMultiSelect {
+    position: relative !important;
+    z-index: 1000 !important;
+}
+
+/* Multiselect Input Field */
+.stMultiSelect > div > div > div {
     background: #34495e !important;
     color: #e0e0e0 !important;
-    padding: 0.5rem 1rem !important;
+    border: 2px solid #3d4a6a !important;
+    border-radius: 10px !important;
 }
 
-.stSelectbox [role="option"]:hover {
+/* All possible multiselect dropdown containers */
+.stMultiSelect div[data-baseweb="select"],
+.stMultiSelect div[data-baseweb="popover"],
+.stMultiSelect div[role="listbox"],
+.stMultiSelect ul,
+.stMultiSelect > div > div > div > div,
+.stMultiSelect [class*="dropdown"],
+.stMultiSelect [class*="menu"],
+.stMultiSelect [class*="option"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    border: 2px solid #3d4a6a !important;
+    border-radius: 10px !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.9) !important;
+}
+
+/* Specific targeting for multiselect dropdown options */
+.stMultiSelect [role="option"],
+.stMultiSelect li,
+.stMultiSelect div[role="button"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    padding: 0.75rem 1rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+}
+
+/* Hover and selected states for multiselect */
+.stMultiSelect [role="option"]:hover,
+.stMultiSelect li:hover,
+.stMultiSelect div[role="button"]:hover {
     background: #4c72c4 !important;
     color: #f0f2f5 !important;
 }
 
-.stSelectbox [aria-selected="true"] {
+.stMultiSelect [aria-selected="true"],
+.stMultiSelect [data-selected="true"],
+.stMultiSelect .selected {
     background: #4c72c4 !important;
     color: #f0f2f5 !important;
 }
 
-/* Multiselect Styling */
-.stMultiSelect > div > div > div {
-    background: #34495e;
-    color: #e0e0e0;
-    border: 2px solid #3d4a6a;
+/* Force positioning and layering for multiselect */
+.stMultiSelect > div > div {
+    position: relative !important;
+    z-index: 9999 !important;
+}
+
+/* Multiselect dropdown positioning */
+.stMultiSelect div[data-baseweb="popover"] {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 999999 !important;
+    margin-top: 2px !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+}
+
+/* Override any transparent backgrounds for multiselect */
+.stMultiSelect * {
+    background-color: inherit !important;
+}
+
+.stMultiSelect div[role="listbox"] {
+    background: #34495e !important;
+    max-height: 200px !important;
+    overflow-y: auto !important;
+    z-index: 999999 !important;
 }
 
 /* Comprehensive Streamlit Component Dark Theme Overrides */
@@ -711,6 +844,93 @@ st.markdown("""
 
 .main > div, .main .block-container, .reportview-container {
     background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%) !important;
+}
+
+/* ========== FINAL DROPDOWN OVERRIDE - CATCH ALL ========== */
+/* This section ensures ALL dropdown elements have proper styling */
+
+/* Target all possible dropdown containers with comprehensive selectors */
+[data-baseweb="popover"],
+[data-baseweb="select"],
+div[role="listbox"],
+div[role="menu"],
+ul[role="listbox"],
+ul[role="menu"],
+.stSelectbox ul,
+.stSelectbox div[role="listbox"],
+.stMultiSelect ul,
+.stMultiSelect div[role="listbox"],
+[class*="css"][class*="select"],
+[class*="css"][class*="dropdown"],
+[class*="css"][class*="menu"],
+[class*="css"][class*="option"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    border: 2px solid #3d4a6a !important;
+    border-radius: 10px !important;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.9) !important;
+    z-index: 999999 !important;
+    position: absolute !important;
+}
+
+/* Target all possible option elements */
+[role="option"],
+li[role="option"],
+div[role="option"],
+.stSelectbox li,
+.stMultiSelect li,
+[class*="css"][class*="option"],
+button[role="option"] {
+    background: #34495e !important;
+    color: #e0e0e0 !important;
+    padding: 0.75rem 1rem !important;
+    border: none !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+}
+
+/* Hover states for all option elements */
+[role="option"]:hover,
+li[role="option"]:hover,
+div[role="option"]:hover,
+.stSelectbox li:hover,
+.stMultiSelect li:hover,
+[class*="css"][class*="option"]:hover,
+button[role="option"]:hover {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+/* Selected states for all option elements */
+[role="option"][aria-selected="true"],
+[role="option"][data-selected="true"],
+li[role="option"][aria-selected="true"],
+div[role="option"][aria-selected="true"],
+.stSelectbox li[aria-selected="true"],
+.stMultiSelect li[aria-selected="true"],
+[class*="css"][class*="option"][aria-selected="true"],
+button[role="option"][aria-selected="true"] {
+    background: #4c72c4 !important;
+    color: #f0f2f5 !important;
+}
+
+/* Force all dropdown containers to be properly positioned */
+.stSelectbox,
+.stMultiSelect {
+    position: relative !important;
+    z-index: 1000 !important;
+}
+
+.stSelectbox > div,
+.stMultiSelect > div {
+    position: relative !important;
+    z-index: 1001 !important;
+}
+
+/* Ensure dropdowns appear above everything */
+[data-baseweb="popover"] {
+    z-index: 999999 !important;
+    position: fixed !important;
 }
 
 /* Responsive adjustments */
