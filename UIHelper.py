@@ -490,15 +490,20 @@ def optimizing_question(relative_contents, query):
 
                         **Answer:**
                         """
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
-        results = response.text
-        return results
+        try:
+            response_text = handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+            return response_text
+        except ValueError as api_error:
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return (
+                    "⚠️ The AI is temporarily unavailable due to API rate limits. "
+                    "Please try again later or upgrade your API plan."
+                )
+            else:
+                return f"⚠️ Answer generation failed: {error_msg}"
     except Exception as e:
-        raise ValueError(f"Failed to optimize the question: {str(e)}")
+        return f"⚠️ Answer generation failed: {str(e)}"
 
 def display_summary(summary):
     try:
@@ -535,15 +540,20 @@ def optimizing_question_with_external_info(relative_contents, query):
 
                     **Answer:**
                     """
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
-        results = response.text
-        return results
+        try:
+            response_text = handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+            return response_text
+        except ValueError as api_error:
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return (
+                    "⚠️ The AI is temporarily unavailable due to API rate limits. "
+                    "Please try again later or upgrade your API plan."
+                )
+            else:
+                return f"⚠️ Answer generation failed: {error_msg}"
     except Exception as e:
-        raise ValueError(f"Failed to optimize the question: {str(e)}")
+        return f"⚠️ Answer generation failed: {str(e)}"
 
 def generate_suggested_questions(docs, num_questions=5):
     """Generate relevant questions based on the video content."""
@@ -696,17 +706,21 @@ def analyze_video_sentiment(docs):
                     
                     Keep the analysis objective and based solely on the transcript content.
                     """
-        
-        genai.configure(api_key=google_api_key)
-        model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-        response = model.generate_content(template)
-        if not response.text:
-            raise ValueError("No response text found.")
-        
-        return response.text
+        try:
+            response_text = handle_gemini_api_call(template, max_retries=2, initial_delay=1)
+            return response_text
+        except ValueError as api_error:
+            error_msg = str(api_error)
+            if "rate limit" in error_msg.lower() or "quota" in error_msg.lower():
+                return (
+                    "⚠️ Sentiment analysis temporarily unavailable due to API rate limits. "
+                    "Please try again later."
+                )
+            else:
+                return f"⚠️ Sentiment analysis failed: {error_msg}"
         
     except Exception as e:
-        raise ValueError(f"Failed to analyze video sentiment: {str(e)}")
+        return f"⚠️ Sentiment analysis failed: {str(e)}"
 
 # Comparative Analysis Functions
 def compare_videos_analysis(videos_data, aspects, depth):
